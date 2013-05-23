@@ -87,7 +87,7 @@ void loop()
 
   if (irrecv.decode(&results))
   {
-    timeOfLast = millis();
+    
      Serial.println("got something");
     in_transmission = true;
     Serial.println(results.value, HEX);
@@ -114,7 +114,9 @@ void loop()
       val = translateCodes3(key);
       break;
     }
-  } else if(millis() - timeOfLast > 2000) {
+    timeOfLast = millis();
+  }
+  if(millis() - timeOfLast > 2000) {
     timeOfLast = millis();
     resetVariables();
   } 
@@ -193,7 +195,8 @@ int translateCodes3(long key) {
 
 void printTransmission() {
   
-//   Serial.print(transmission_sequence);
+   Serial.println("print transmission called");
+   Serial.print("index = "); Serial.println(index);
    delay(10);
   
   for (int i=0; i<index; i++) {
@@ -221,7 +224,7 @@ void resetVariables() {
    } 
   }
   
-  index = 0;
+  index = 0;                  // this can cause problems sometimes !!!!!!
   in_transmission = false;
   v_index=0;
   val=1;
