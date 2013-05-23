@@ -1,3 +1,5 @@
+//#include <SPI.h>
+
 /*
  Dominic Guri
  Andrew Whitehead
@@ -39,7 +41,7 @@ String step_list[MAX_STEPS] = {"Define     Problem","Research","Brainstorm","Sel
 void setup() 
 {
 
-  
+  //SPI.begin();
   Serial.begin(9600); 
   GLCD.Init(); // start the GLCD code
   GLCD.SelectFont(Arial_14);

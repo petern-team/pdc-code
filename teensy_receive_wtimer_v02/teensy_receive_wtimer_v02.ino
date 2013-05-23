@@ -60,7 +60,6 @@ void setup()
 
   irrecv.enableIRIn();              // Start the IR receiver
  
-//  digitalWrite(greenLED, HIGH);
     digitalWrite(redLED, LOW);
     digitalWrite(greenLED, HIGH);
     
@@ -70,8 +69,6 @@ void setup()
 
 void loop()
 {
-  
-
 
   if(in_transmission == false) {
       digitalWrite(redLED, LOW);
@@ -88,7 +85,7 @@ void loop()
   if (irrecv.decode(&results))
   {
     
-     Serial.println("got something");
+    Serial.println("got something");
     in_transmission = true;
     Serial.println(results.value, HEX);
     // here if data is received
@@ -116,7 +113,8 @@ void loop()
     }
     timeOfLast = millis();
   }
-  if(millis() - timeOfLast > 2000) {
+  
+  if(millis() - timeOfLast > 3000) {
     timeOfLast = millis();
     resetVariables();
   } 
