@@ -30,21 +30,20 @@ void setup() {
 // and sensorValue. At the end of each triplet will be a sentinel (-1)
 ISR (SPI_STC_vect)
 {
-byte input = SPDR;
+  char input = SPDR;
   
   // add to buffer if room
-  if (pos < sizeof(SPI_in))
-    {
-    //  pos++;
-    SPI_in[pos++] = input;
+  if (pos < sizeof(SPI_in)) {
+    SPI_in[pos] = input+0;
     
     // example: newline means time to process buffer
-    if (input == -1)
+    if (SPI_in[pos] == -1)
       SPI_complete = true;
       
-    }  else {
-      Serial.println("Error: buffer full");
-    }
+    pos++;
+  }  else {
+    Serial.println("Error: buffer full");
+  }
 }
 
 void loop() {
@@ -56,8 +55,9 @@ void loop() {
       SPI_in[--pos] = 0;
     }
     SPI_complete = false;
+    Serial.print("sensor value: "); Serial.println(sensorValue);
   }
-  Serial.print("sensor value: "); Serial.println(sensorValue);
+
 }
   
   

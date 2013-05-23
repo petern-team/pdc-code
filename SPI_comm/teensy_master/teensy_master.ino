@@ -18,10 +18,11 @@ void setup() {
 
 void loop() 
 {
-  String output = "test";
+  char output[] = {0,1,2,-1};
   digitalWrite(SSPIN, LOW);
   
-  for(int i=0;i<sizeof(output);i++) {
+  for(int i=0;i<(sizeof(output)/2);i++) {
+    Serial.println(output[i]);
     SPI.transfer(output[i]);
   }
   

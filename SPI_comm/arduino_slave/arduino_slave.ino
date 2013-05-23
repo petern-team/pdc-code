@@ -7,6 +7,7 @@ arduino slave code
 #include <SPI.h>
 
 char SPI_in[100];
+int data[100];
 volatile byte pos;
 volatile boolean SPI_complete;
 
@@ -24,18 +25,16 @@ void setup() {
 // SPI interrupt routine
 ISR (SPI_STC_vect)
 {
-byte input = SPDR;
+  char input = SPDR;
   
   // add to buffer if room
-  if (pos < sizeof(SPI_in))
-    {
-    //  pos++;
-    SPI_in[pos++] = input;
+  if (pos < sizeof(data)) {
+    data[pos] = input+0;
     
     // example: newline means time to process buffer
-    if (input == '\n')
+    if (data[pos] == -1)
       SPI_complete = true;
-      
+    pos++;
     }  else {
       Serial.println("Error: buffer full");
     }
@@ -43,11 +42,15 @@ byte input = SPDR;
 
 void loop() {
   if(SPI_complete) {
-    SPI_in[--pos] = 0;
-    Serial.println(SPI_in);
-    for(pos;pos>=0;pos--) {
-      SPI_in[pos] = 0;
+   // SPI_in[--pos] = 0;
+    //Serial.println(SPI_in
+    for(int i=0;i<pos;i++) {
+      Serial.print(data[i]); Serial.print(", ");
+      data[i] = 0;
     }
+    Serial.println();
+    pos = 0;
+    SPI_complete = false;
   }
 }
   
