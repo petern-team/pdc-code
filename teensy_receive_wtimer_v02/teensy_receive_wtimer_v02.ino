@@ -127,6 +127,8 @@ int translateCodes1(long key) {
     digitalWrite(greenLED, LOW);
     digitalWrite(redLED, HIGH);
   
+   if(key == 0 && index >= 9)
+     index = 0;
 
    if (key == 10) {
      printTransmission();
@@ -222,7 +224,7 @@ void resetVariables() {
    } 
   }
   
-  index = 0;                  // this can cause problems sometimes !!!!!!
+//  index = 0;                  // this can cause problems sometimes !!!!!!
   in_transmission = false;
   v_index=0;
   val=1;
