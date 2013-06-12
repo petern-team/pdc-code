@@ -1,21 +1,18 @@
 int input;
 int timeOfLast;
 int pos;
-int changes;
+volatile int changes;
+volatile int index;
 //int spacing[100];
 volatile long spacing;
-volatile boolean val;
 
 void setup() {
   Serial.begin(9600);
   pinMode(8, INPUT);
   pinMode(11, OUTPUT);
-  analogWrite(11, 10);
-  //  pos = 0;
-  //  timeOfLast = 0;
+  analogWrite(11, 200);
   spacing = 0;
   changes = 0;
-  val = false;
 
   cli();
 //set timer0 interrupt at 10kHz
@@ -23,7 +20,7 @@ void setup() {
   TCCR0B = 0;// same for TCCR0B
   TCNT0  = 0;//initialize counter value to 0
   // set compare match register for 2khz increments
-  OCR0A = 32;// = (16*10^6) / (10000*64) - 1 (must be <256)
+  OCR0A = 8;// = (16*10^6) / (490*1024) - 1 (must be <256)
   // turn on CTC mode
   TCCR0A |= (1 << WGM01);
   // Set CS01 and CS00 bits for 64 prescaler
@@ -43,14 +40,7 @@ sei();
 }
 
 void loop() {
-//  input = (PINB & B000001);// >> 3;
-//  delay(1000);
-//  if(pos == 10) {
-//    printArray();
-//    pos = 0;
-//  }
-//Serial.println(input, BIN);//  >> 3));
-//delay(1000);
+
   if(changes > 120) {
     Serial.println(spacing, BIN);
     changes = 0;
@@ -58,9 +48,10 @@ void loop() {
 }
 
 ISR(TIMER0_COMPA_vect) {
-  spacing = (spacing << 1) | (PINB & 0000001);
-  changes++;
-  TCNT0  = 0;
+  if(spacing >= 1) {
+    spacing = (spacing << 1) | (PINB & 0000001);
+    changes++;
+  }
 }
 
 ISR(TIMER1_CAPT_vect) {
