@@ -4,11 +4,13 @@
 
 const int irReceivePin = 10;
 
-const int NUM_CODES = 16;
-byte raw_codes[NUM_CODES] = {0x801,0x2,0x803,0x4,0x805,0x6,0x807,
-                    0x8,0x809,0x0,0x82D,0x19,0x82C,0x2B,0x80C,0x38};
+const int NUM_CODES = 19;
+byte raw_codes[NUM_CODES] = {0x501,0xD02,0x503,0xD04,0x505,0xD06,
+            0x507,0xD08,0x509,0xD00,0x520,0xD21,0x511,0xD10,0x53B,0xD31,0x50C,0xD32,0x535};
+byte constants = INPUT;              
 
-//String code_IDs[50] = {"1"
+String code_IDs[NUM_CODES] = {"1","2","3","4","5","6","7","8","9","0",
+              "up","down","left","right","enter","switch","tab","shift","caps"};
 int length;
 
 IRrecv irrecv(irReceivePin);
@@ -18,8 +20,9 @@ IRsend irsend;
 
 void setup() {
   Serial.begin(9600);
+  Serial.println(constants, HEX);
   
-  pinMode(irReceivePin, INPUT);
+  pinMode(irReceivePin, constants);
   irrecv.enableIRIn();
 
 }
