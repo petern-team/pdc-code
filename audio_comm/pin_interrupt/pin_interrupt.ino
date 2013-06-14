@@ -29,17 +29,21 @@ void setup() {
   changes = 0;
 
   cli();
-//set timer2 interrupt at 2kHz
+//set timer2 interrupt at 1kHz
   TCCR2A = 0;// set entire TCCR0A register to 0
   TCCR2B = 0;// same for TCCR0B
   TCNT2  = 0;//initialize counter value to 0
-  // set compare match register for 100hz increments
-  OCR2A = 160;// = (16*10^6) / (100*1024) - 1 (must be <256)
+  // set compare match register for 1000hz increments
+  OCR2A = 250;// = (16*10^6) / (1000*64) - 1 (must be <256)
   // turn on CTC mode
-  TCCR2A |= (1 << WGM22);
-  // Set CS01 and CS00 bits for 64 prescaler
-  //  TCCR0B |= (1 << CS01) | (1 << CS00);   
-  TCCR2B |= (1 << CS22) | (1 << CS20); // 1024 prescale
+  TCCR2A |= (1 << WGM21);
+  // Set prescaler
+  //  TCCR2B |= (1 << CS20);  // no prescaler
+  //  TCCR2B |= (1 << CS21);  // 8 prescaler
+  TCCR2B |= (1 << CS22);  // 64 prescaler 
+//  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
+//  TCCR2B |= (1 << CS22) | (1 << CS20); // 1024 prescaler - not for timer2
+  
   // enable timer compare interrupt
   TIMSK2 |= (1 << OCIE2A);
   
@@ -106,7 +110,8 @@ ISR(TIMER2_COMPA_vect) {
     else
       num_zeros++;
     byte_index++; byte_index &= B111;     
-    if(!byte_index) index++; //byte_index was just reset so increment the array index
+    if(!byte_index) 
+      index++; //byte_index was just reset so increment the array index
     changes++;
   }
 }
