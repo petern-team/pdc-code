@@ -7,12 +7,18 @@ int pos;
 byte the_byte;
 byte max_bi;
 volatile byte num_zeros;
-const int ARR_SIZE = 400;
+const int ARR_SIZE = 200;
 volatile int changes;
 volatile int index;
 int ref_index;
 volatile byte byte_index;
-volatile byte raw_data[ARR_SIZE];
+
+volatile boolean odd_array;
+volatile byte *raw_data;//[ARR_SIZE];
+volatile byte *stagnant_data;
+volatile byte raw_data_even[ARR_SIZE];
+volatile byte raw_data_odd[ARR_SIZE];
+byte prefix[20];
 byte storage_arr[ARR_SIZE/2];
 char char_arr[ARR_SIZE/5];
 int condensed_index;
@@ -20,7 +26,9 @@ int char_index;
 
 void setup() {
   Serial.begin(9600);
-  max_bi = 0;
+  raw_data = raw_data_even;
+  odd_array = false;
+
   num_zeros = 0;
   index = 0;
   condensed_index = 0;
@@ -28,7 +36,8 @@ void setup() {
   the_byte = 0;
   byte_index = 0;
   for(int i=0;i<ARR_SIZE;i++) {
-    raw_data[i] = 0;
+    raw_data_even[i] = 0;
+    raw_data_odd[i] = 0;
   }
   for(int i=0;i<ARR_SIZE/2;i++) {
     storage_arr[i] = 0;
@@ -66,46 +75,42 @@ sei();
 
 void loop() {
 
-  if(digitalRead(7) && changes > 10 || changes > 3100) {
-    if(changes > 3100)
-      Serial.println("ERROR: OVERFLOW");
+  if(changes > 1100) {
+//    Serial.println("here");
+
+    noInterrupts();
     ref_index = index;
+    index = 0;
+    byte_index = 0;
+    stagnant_data = raw_data;
+    if(odd_array) {
+      stagnant_data = raw_data_odd;
+      raw_data = raw_data_even;
+    } else {
+      stagnant_data = raw_data_even;
+      raw_data = raw_data_odd;
+    }
+    odd_array = !odd_array;
+//    interrupts();
+    storeArray(ref_index);
+    parseArray();
+    condensed_index = 0;
+    changes = 0;
+  }
+    
+  
+  if(digitalRead(7) && changes > 10) {
+    Serial.print("changes: "); Serial.println(changes);
+    ref_index = index;
+    stagnant_data = raw_data;
     index = 0;
     byte_index = 0;
     changes = 0;
     storeArray(ref_index);
     parseArray();
+    printArray();
     condensed_index = 0;
   }
-
-//    Serial.print(changes); Serial.print(", "); Serial.print(ref_index); Serial.print(": ");  
-//    for(int i=0;i<ref_index;i++) {
-//      the_byte = raw_data[i];
-//      if(the_byte < 128) {
-//        Serial.print(0);
-//        if(the_byte < 64) {
-//          Serial.print(0);
-//          if(the_byte < 32) {
-//            Serial.print(0);
-//            if(the_byte < 16) {
-//              Serial.print(0);
-//              if(the_byte < 8) {
-//                Serial.print(0);
-//                if(the_byte < 4) {
-//                  Serial.print(0);
-//                  if(the_byte < 2)
-//                    Serial.print(0);
-//                }
-//              }
-//            }
-//          }
-//        }
-//      }
-//            Serial.print(raw_data[i], BIN); Serial.print(" ");
-//    }
-//    Serial.println();
-//  
-//  changes = 0;
 }
 
 
@@ -150,7 +155,7 @@ void storeArray(int index) {
   byte bit_counter = 1;    // always initializes to 1
   for(int i=0;i<index;i++) {
     for(int j=0;j<8;j++) {
-      the_bit = raw_data[i] << j;
+      the_bit = stagnant_data[i] << j;
       the_bit >>= 7;
       if(the_bit == current_value) {
         bit_counter++;
@@ -167,7 +172,7 @@ void storeArray(int index) {
       }
     }
   }
-  Serial.println("Done Condensing");
+//  Serial.println("Done Condensing");
 //  Serial.print("condensed index: "); Serial.println(condensed_index);
 }
   
@@ -179,23 +184,31 @@ void parseArray() {
     findBuffer(&search_index, HEADER);
 //    Serial.println(search_index);
     if(search_index == -1) {
-      Serial.println();
-      Serial.println("Error: no header found");
+//      Serial.println();
+//      Serial.println("Error: no header found");
       return;
     }
     the_char = getChar(search_index);
     char_arr[char_index] = the_char;
-    Serial.print(the_char);
+    char_index++;
+//    Serial.print(the_char);
     search_index += 8;
     findBuffer(&search_index, TAIL);
 //    Serial.println(search_index);
     if(search_index == -1) {
-      Serial.println("Error: no tail found");
+//      Serial.println("Error: no tail found");
       return;
     }
     while(storage_arr[search_index] == 0)
       search_index++;
   } 
+//  Serial.println();
+}
+
+void printArray() {
+  for(int i=0;i<=char_index;i++) {
+    Serial.print(char_arr[i]);
+  }
   Serial.println();
 }
 
