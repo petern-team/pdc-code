@@ -1,5 +1,6 @@
 const byte HEADER = B100011;
 const byte TAIL = B111111;
+const int ARR_SIZE = 400;
 
 #define SEARCH2 3      //probs does not work
 #define SEARCH3 7
@@ -13,8 +14,9 @@ const byte TAIL = B111111;
 
 
 volatile byte num_zeros;
-const int ARR_SIZE = 400;
 volatile int changes;
+int last_state;
+long time_of_last;
 volatile int index;
 volatile byte bit_index;
 
@@ -22,6 +24,9 @@ volatile unsigned short buffer;
 volatile byte storage_arr[ARR_SIZE];
 char char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy
 int char_index;
+
+volatile unsigned long overflow_1600;
+unsigned long seconds;
 
 void setup() {
   Serial.begin(9600);
@@ -34,6 +39,8 @@ void setup() {
   index = 0;
   char_index = 0;
   bit_index = 0;
+  last_state = 0;
+  overflow_1600 = 0;
 
   for(int i=0;i<ARR_SIZE;i++) {
     storage_arr[i] = 0;
@@ -42,22 +49,22 @@ void setup() {
 
   cli();
 //set timer2 interrupt at 1.6kHz
-  TCCR2A = 0;// set entire TCCR0A register to 0
-  TCCR2B = 0;// same for TCCR0B
-  TCNT2  = 0;//initialize counter value to 0
+  TCCR0A = 0;// set entire TCCR0A register to 0
+  TCCR0B = 0;// same for TCCR0B
+  TCNT0  = 0;//initialize counter value to 0
   // set compare match register for 1600hz increments
-  OCR2A = 156;// = (16*10^6) / (1600*64) - 1 (must be <256)
+  OCR0A = 156;// = (16*10^6) / (1600*64) - 1 (must be <256)
   // turn on CTC mode
-  TCCR2A |= (1 << WGM21);
+  TCCR0A |= (1 << WGM01);
   // Set prescaler
   //  TCCR2B |= (1 << CS20);  // no prescaler
   //  TCCR2B |= (1 << CS21);  // 8 prescaler
-  TCCR2B |= (1 << CS22);  // 64 prescaler 
+  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler 
 //  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
 //  TCCR2B |= (1 << CS22) | (1 << CS20); // 1024 prescaler - not for timer2
   
   // enable timer compare interrupt
-  TIMSK2 |= (1 << OCIE2A);
+  TIMSK0 |= (1 << OCIE0A);
   
   
   // setup for the input capture interrupt
@@ -70,36 +77,18 @@ sei();
 }
 
 void loop() {
+  seconds = overflow_1600/800;
+  if(last_state != changes) {
+    time_of_last = seconds;
+  }
+  last_state = changes;
     
-  if(digitalRead(7) && changes > 10) {
-    Serial.print("changes: "); Serial.println(changes);
+//  if(digitalRead(7) && changes > 10) {
+  if(seconds - time_of_last > 1 && changes > 100) { //index > 2) {
+    changes = 0;
+    Serial.print("index: "); Serial.println(index);
 //    Serial.println(index);
     changes = 0;
-//    for(int i=0;i<index;i++) {
-//      byte the_byte = storage_arr[i];
-//      if(the_byte < 128) {
-//        Serial.print(0);
-//        if(the_byte < 64) {
-//          Serial.print(0);
-//          if(the_byte < 32) {
-//            Serial.print(0);
-//            if(the_byte < 16) {
-//              Serial.print(0);
-//              if(the_byte < 8) {
-//                Serial.print(0);
-//                if(the_byte < 4) {
-//                  Serial.print(0);
-//                  if(the_byte < 2)
-//                    Serial.print(0);
-//                }
-//              }
-//            }
-//          }
-//        }
-//      }
-//            Serial.print(storage_arr[i], BIN); Serial.print(" ");
-//    }
-//    Serial.println();
     parseArray();
     printArray();
     index = 0;
@@ -108,7 +97,8 @@ void loop() {
 }
 
 
-ISR(TIMER2_COMPA_vect) {
+ISR(TIMER0_COMPA_vect) {
+  overflow_1600++;
 // if one of the last four pulses was true or current transmission is true  
   if((PINB & B0000001) || num_zeros < 75) {
     buffer = ((buffer << 1) | (PINB & B00000001)) & FINDGROUP;
@@ -125,7 +115,6 @@ ISR(TIMER2_COMPA_vect) {
       bit_index &= B111;     
       if(!bit_index) index++; //bit_index was just reset so increment the array index
     }
-    
     changes++;
   }
 }
@@ -137,18 +126,19 @@ ISR(TIMER1_CAPT_vect) {
       buffer = (buffer << 1) | 1 & FINDGROUP;
    }     
    TCCR1B ^= _BV(ICES1);                 // toggle bit value to trigger on the other edge
-   changes++;
+
    num_zeros = 0;
     if(buffer == 0 || buffer == FINDGROUP) {
       storage_arr[index] = (storage_arr[index] << 1) | (buffer & 1);
       buffer ^= 1;
+      
       // increment bit_index and make sure its <= 8
       bit_index++; 
       bit_index &= B111; 
       if(!bit_index) index++;  //bit_index was just reset so increment the array index
     }
     changes++;
-    TCNT2  = 0; // reset timer2 counter
+    TCNT0  = 0; // reset timer0 counter
 }
   
 void parseArray() {
@@ -197,7 +187,6 @@ void findBuffer(int *start_byte, byte *start_bit, byte search) {
   byte to_compare = 0;
   byte the_bit = 0;
   
-//  while(*start_byte < index) {
   for(int i=*start_byte;i<index;i++) {
     for(int j=*start_bit;j<8;j++) {
       if(to_compare == search) {    // header or tail was found
