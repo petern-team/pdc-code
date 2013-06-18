@@ -1,44 +1,42 @@
 const byte HEADER = B100011;
 const byte TAIL = B111111;
 
+#define SEARCH8 255
+#define SEARCH12 4095
+#define SEARCH16 65535
+
 int input;
 int timeOfLast;
 int pos;
 byte the_byte;
 byte max_bi;
 volatile byte num_zeros;
-const int ARR_SIZE = 200;
+const int ARR_SIZE = 400;
 volatile int changes;
 volatile int index;
 int ref_index;
 volatile byte byte_index;
 
 volatile boolean odd_array;
-volatile byte *raw_data;//[ARR_SIZE];
 volatile byte *stagnant_data;
-volatile byte raw_data_even[ARR_SIZE];
-volatile byte raw_data_odd[ARR_SIZE];
-byte prefix[20];
-byte storage_arr[ARR_SIZE/2];
-char char_arr[ARR_SIZE/5];
-int condensed_index;
+volatile unsigned short buffer;
+volatile byte storage_arr[ARR_SIZE];
+char char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy
+volatile int condensed_index;
 int char_index;
 
 void setup() {
   Serial.begin(9600);
-  raw_data = raw_data_even;
-  odd_array = false;
+//  raw_data = raw_data_even;
+//  odd_array = false;
+  buffer = 1;
 
   num_zeros = 0;
   index = 0;
   condensed_index = 0;
   char_index = 0;
-  the_byte = 0;
   byte_index = 0;
-  for(int i=0;i<ARR_SIZE;i++) {
-    raw_data_even[i] = 0;
-    raw_data_odd[i] = 0;
-  }
+
   for(int i=0;i<ARR_SIZE/2;i++) {
     storage_arr[i] = 0;
   }
@@ -74,39 +72,20 @@ sei();
 }
 
 void loop() {
-
-  if(changes > 1100) {
-//    Serial.println("here");
-
-    noInterrupts();
-    ref_index = index;
-    index = 0;
-    byte_index = 0;
-    stagnant_data = raw_data;
-    if(odd_array) {
-      stagnant_data = raw_data_odd;
-      raw_data = raw_data_even;
-    } else {
-      stagnant_data = raw_data_even;
-      raw_data = raw_data_odd;
-    }
-    odd_array = !odd_array;
-//    interrupts();
-    storeArray(ref_index);
-    parseArray();
-    condensed_index = 0;
-    changes = 0;
-  }
     
-  
   if(digitalRead(7) && changes > 10) {
     Serial.print("changes: "); Serial.println(changes);
-    ref_index = index;
-    stagnant_data = raw_data;
-    index = 0;
-    byte_index = 0;
+//    Serial.println(condensed_index);
+//    ref_index = index;
+//    stagnant_data = raw_data;
+//    index = 0;
+//    byte_index = 0;
     changes = 0;
-    storeArray(ref_index);
+//    storeArray(ref_index);
+    for(int i=0;i<condensed_index;i++) {
+      Serial.print(storage_arr[i]); Serial.print(", ");
+    }
+    Serial.println();
     parseArray();
     printArray();
     condensed_index = 0;
@@ -115,65 +94,47 @@ void loop() {
 
 
 ISR(TIMER2_COMPA_vect) {
-// if one of the last four pulses was true or current transmission is true 
-//  if(!(byte_index > 6 && raw_data[index] == 0) || (PINB & B0000001)){  
-  if((PINB & B0000001) || num_zeros < 64) {
-    raw_data[index] = (raw_data[index] << 1) | (PINB & B0000001);
-    // increment byte_index and make sure its less than 8
+// if one of the last four pulses was true or current transmission is true  
+  if((PINB & B0000001) || num_zeros < 75) {
+    buffer = ((buffer << 1) | (PINB & B00000001)) & SEARCH12;
+    
     if(PINB & B0000001)
       num_zeros=0;
     else
       num_zeros++;
-    byte_index++; byte_index &= B111;     
-    if(!byte_index) 
-      index++; //byte_index was just reset so increment the array index
+      
+    if(buffer == 0 || buffer == SEARCH12) {
+      storage_arr[condensed_index] = buffer & 1;
+      condensed_index++;
+      buffer ^= 1;
+    }
+//    byte_index++; byte_index &= B111;     
+//    if(!byte_index) 
+//      index++; //byte_index was just reset so increment the array index
     changes++;
   }
 }
 
 ISR(TIMER1_CAPT_vect) {
    if(!bit_is_set(TCCR1B ,ICES1)){  // was falling edge detected? - last bit was 1  
-      raw_data[index]  = (raw_data[index] << 1);
-   } else {                         // rising edge was detected 
-      raw_data[index]  = (raw_data[index] << 1) | 1;
+      buffer = buffer << 1 & SEARCH12;
+   } else {                         // rising edge was detected
+      buffer = (buffer << 1) | 1 & SEARCH12;
    }     
    TCCR1B ^= _BV(ICES1);                 // toggle bit value to trigger on the other edge
-//   capture_changes++;
    changes++;
    num_zeros = 0;
+    if(buffer == 0 || buffer == SEARCH12) {
+      storage_arr[condensed_index] = buffer & 1;
+      condensed_index++;
+      buffer ^= 1;
+    }
    
     // increment byte_index and make sure its <= 8
-    byte_index++; 
-    byte_index &= B111; 
-    if(!byte_index) index++;  //byte_index was just reset so increment the array index
+//    byte_index++; 
+//    byte_index &= B111; 
+//    if(!byte_index) index++;  //byte_index was just reset so increment the array index
    TCNT2  = 0; // reset timer2 counter
-}
-
-void storeArray(int index) {
-  byte current_value=0;
-  byte the_bit; //will be 0 or 1
-  byte bit_counter = 1;    // always initializes to 1
-  for(int i=0;i<index;i++) {
-    for(int j=0;j<8;j++) {
-      the_bit = stagnant_data[i] << j;
-      the_bit >>= 7;
-      if(the_bit == current_value) {
-        bit_counter++;
-      } else {
-        bit_counter = 1;
-      }
-      current_value = the_bit;
-      
-      if(bit_counter == 12) {
-//        Serial.print(current_value); Serial.print(", ");
-        storage_arr[condensed_index] = current_value;
-        bit_counter = 1;
-        condensed_index++;
-      }
-    }
-  }
-//  Serial.println("Done Condensing");
-//  Serial.print("condensed index: "); Serial.println(condensed_index);
 }
   
 void parseArray() {
@@ -191,7 +152,7 @@ void parseArray() {
     the_char = getChar(search_index);
     char_arr[char_index] = the_char;
     char_index++;
-//    Serial.print(the_char);
+    Serial.println(char_arr[char_index-1]+0);
     search_index += 8;
     findBuffer(&search_index, TAIL);
 //    Serial.println(search_index);
@@ -206,7 +167,7 @@ void parseArray() {
 }
 
 void printArray() {
-  for(int i=0;i<=char_index;i++) {
+  for(int i=0;i<char_index;i++) {
     Serial.print(char_arr[i]);
   }
   Serial.println();
