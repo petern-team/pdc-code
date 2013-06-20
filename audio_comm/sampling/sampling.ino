@@ -1,3 +1,4 @@
+
 // simple sketch to continually sample the input from a digital pin into 
 // an array, until a string of 8 zeros is received
 

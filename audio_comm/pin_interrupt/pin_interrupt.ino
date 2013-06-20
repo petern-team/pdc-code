@@ -83,8 +83,8 @@ void loop() {
   }
   last_state = changes;
     
-//  if(digitalRead(7) && changes > 10) {
-  if(seconds - time_of_last > 1 && changes > 100) { //index > 2) {
+  if(digitalRead(7) && changes > 10) {
+//  if(seconds - time_of_last > 1 && changes > 100) { //index > 2) {
     changes = 0;
     Serial.print("index: "); Serial.println(index);
 //    Serial.println(index);
