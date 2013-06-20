@@ -66,14 +66,8 @@ void setup() {
   // enable timer compare interrupt
   TIMSK0 |= (1 << OCIE0A);
   
-  
-  // setup for the input capture interrupt
-  TCCR1A = _BV(WGM10) | _BV(WGM11);             // Timer 1 is Phase-correct 10-bit PWM. 
-  TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS11); // div 8 clock prescaler to give .5us ticks on 16mhz clock
-  TCCR1B |= _BV(ICES1);                         // enable input capture
-  TIMSK1 =  _BV(ICIE1);                         // enable input capture interrupt for timer 1
-
 sei();
+attachInterrupt(0,pinChange,CHANGE);
 }
 
 void loop() {
@@ -100,10 +94,10 @@ void loop() {
 ISR(TIMER0_COMPA_vect) {
   overflow_1600++;
 // if one of the last four pulses was true or current transmission is true  
-  if((PINB & B0000001) || num_zeros < 75) {
-    buffer = ((buffer << 1) | (PINB & B00000001)) & FINDGROUP;
+  if((PIND & B0000100) || num_zeros < 75) {
+    buffer = ((buffer << 1) | ((PIND & B00000100)) >> 2) & FINDGROUP;
     
-    if(PINB & B0000001)
+    if(PIND & B0000100)
       num_zeros=0;
     else
       num_zeros++;
@@ -118,27 +112,26 @@ ISR(TIMER0_COMPA_vect) {
     changes++;
   }
 }
-
-ISR(TIMER1_CAPT_vect) {
-   if(!bit_is_set(TCCR1B ,ICES1)){  // was falling edge detected? - last bit was 1  
-      buffer = buffer << 1 & FINDGROUP;
-   } else {                         // rising edge was detected
-      buffer = (buffer << 1) | 1 & FINDGROUP;
-   }     
-   TCCR1B ^= _BV(ICES1);                 // toggle bit value to trigger on the other edge
-
-   num_zeros = 0;
-    if(buffer == 0 || buffer == FINDGROUP) {
-      storage_arr[index] = (storage_arr[index] << 1) | (buffer & 1);
-      buffer ^= 1;
-      
-      // increment bit_index and make sure its <= 8
-      bit_index++; 
-      bit_index &= B111; 
-      if(!bit_index) index++;  //bit_index was just reset so increment the array index
-    }
-    changes++;
-    TCNT0  = 0; // reset timer0 counter
+void pinChange() {
+  buffer = ((buffer << 1) | ((PIND & B0000100) >> 2)) & FINDGROUP;
+//   if(PIND & B0000100)
+//     one_changes++;
+//   else
+//     zero_changes++;
+ num_zeros = 0;
+ changes++;
+   
+ if(buffer == 0 || buffer == FINDGROUP) {
+    storage_arr[index] = (storage_arr[index] << 1) | (buffer & 1);
+    buffer ^= 1;
+    
+    // increment bit_index and make sure its <= 8
+    bit_index++; 
+    bit_index &= B111; 
+    if(!bit_index) index++;  //bit_index was just reset so increment the array index
+  }
+   
+  TCNT0 = 0;
 }
   
 void parseArray() {
