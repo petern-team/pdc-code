@@ -112,6 +112,8 @@ ISR(TIMER0_COMPA_vect) {
     changes++;
   }
 }
+
+// ISR for changing value on pin 2, helps align timer0 for sampling
 void pinChange() {
   buffer = ((buffer << 1) | ((PIND & B0000100) >> 2)) & FINDGROUP;
 //   if(PIND & B0000100)
