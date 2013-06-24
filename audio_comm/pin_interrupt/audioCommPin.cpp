@@ -3,6 +3,7 @@
 const byte HEADER = B100011;
 const byte TAIL = B111111;
 const int ARR_SIZE = 400;
+const int button_pin = 10;
 
 volatile unsigned short buffer;
 volatile byte storage_arr[ARR_SIZE];
@@ -26,7 +27,7 @@ void initAudioPin() {
   overflow_1600 = 0;
   
   cli();
-  //set timer2 interrupt at 1.6kHz
+  //set timer0 interrupt at 1.6kHz
   TCCR0A = 0;// set entire TCCR0A register to 0
   TCCR0B = 0;// same for TCCR0B
   TCNT0  = 0;//initialize counter value to 0
@@ -52,12 +53,12 @@ void initAudioPin() {
   TIMSK1 =  _BV(ICIE1);                         // enable input capture interrupt for timer 1
   
   sei();
-  attachInterrupt(0,pinChange,CHANGE);
+  attachInterrupt(7,pinChange,CHANGE);
 }
 
 // ISR for changing value on pin 2, helps align timer0 for sampling
 void pinChange() {
-  buffer = ((buffer << 1) | ((PIND & B0000100) >> 2)) & FINDGROUP;
+  buffer = ((buffer << 1) | ((PIND & (1<<2)) >> 2)) & FINDGROUP;
 //   if(PIND & B0000100)
 //     one_changes++;
 //   else
@@ -81,10 +82,10 @@ void pinChange() {
 ISR(TIMER0_COMPA_vect) {
   overflow_1600++;
 // if one of the last four pulses was true or current transmission is true  
-  if((PIND & B0000100) || num_zeros < 75) {
-    buffer = ((buffer << 1) | ((PIND & B00000100)) >> 2) & FINDGROUP;
+  if(PIND & (1<<2) || num_zeros < 75) {
+    buffer = ((buffer << 1) | (PIND & (1<<2)) >> 2) & FINDGROUP;
     
-    if(PIND & B0000100)
+    if(PIND & (1<<2))
       num_zeros=0;
     else
       num_zeros++;
@@ -141,6 +142,34 @@ void printArray() {
     Serial.print(char_arr[i]);
   }
   Serial.println();
+  
+//  for(int i=0;i<index;i++) {
+//      byte the_byte = storage_arr[i];
+//      if(the_byte < 128) {
+//        Serial.print(0);
+//        if(the_byte < 64) {
+//          Serial.print(0);
+//          if(the_byte < 32) {
+//            Serial.print(0);
+//            if(the_byte < 16) {
+//              Serial.print(0);
+//              if(the_byte < 8) {
+//                Serial.print(0);
+//                if(the_byte < 4) {
+//                  Serial.print(0);
+//                  if(the_byte < 2)
+//                    Serial.print(0);
+//                }
+//              }
+//            }
+//          }
+//        }
+//      }
+////    Serial.print(changes);Serial.print(": ");Serial.println(spacing, BIN);
+////      if
+//      Serial.print(storage_arr[i], BIN); Serial.print(" ");
+//    }
+//    Serial.println();
 }
 
 void findBuffer(int *start_byte, byte *start_bit, byte search) {
@@ -182,6 +211,7 @@ char getChar(int start_byte, byte start_bit) {
     start_bit &= B111; 
     if(!start_bit) start_byte++;  //byte_index was just reset so increment the array index
   }
+//  Serial.println(the_char+0);
   return the_char+0;
 }
 
@@ -201,7 +231,7 @@ boolean checkTransmission() {
     time_of_last = seconds;
   }
   last_state = changes;
-  if((seconds - time_of_last > 1 || digitalRead(7)) && index > 3)
+  if(/*(seconds - time_of_last > 1 ||*/ digitalRead(button_pin) && index > 0)
     return true;
   else
     return false;
