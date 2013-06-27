@@ -39,12 +39,14 @@ String step_list[MAX_STEPS] = {"Define     Problem","Research","Brainstorm","Sel
 
 void setup() 
 {
-
   
   Serial.begin(9600); 
   GLCD.Init(); // start the GLCD code
   GLCD.SelectFont(Arial_14);
   GLCD.CursorTo(0,0); 
+  Serial.println("about to print to screen");
+  GLCD.print("TESTING");
+  Serial.println("done");
   attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
   attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING); 
   load_screen(); 
@@ -55,42 +57,16 @@ void loop()
   
   if (button_2.pressed==true){ 
     button_1.pressed = false;    // pause the timer
+    GLCD.ClearScreen();
+    GLCD.CursorTo(2,2);
+    GLCD.print("Sending     Times");
     myPDC.createArray(time_1.sectionTime);      // myPDC will put all the times and categores in
     myPDC.sendArray();                          // a 2D array and send it to the docking station
     button_2.pressed=false;
+    GLCD.ClearScreen();
   } 
     
-  if (Serial.available())
-  {
-     Serial.read();
-     for(int j=0; j<NUM_STEPS; j++)
-         {
-            Serial.println(time_1.sectionTime[j]); 
-         }
-  }
-  
-  // buggy code, meant to allow user to change categories
-  ///*
-  if (Serial.available())
-  {
-    NUM_STEPS=Serial.read();
-    char buffer[30];
-    for(int i=0; i<NUM_STEPS; i++)
-    {
-      int count=0; 
-      while(Serial.peek()!='~')
-      {
-        buffer[count]=Serial.read();
-        count++;
-      }
-      for(int j=0; j<count; j++)
-      {
-        step_list[i]+=buffer[j];
-      }
-    }
-  }
-  
-  //*/
+
 
     int sensorValue = analogRead(sensorPin);//read the potentiometer
     caseValue = caseSelect(sensorValue);    // the current category gets whatever the dial is pointing to
@@ -134,7 +110,7 @@ void loop()
 //maps the analog read output to numbers 0-7
 int caseSelect(int sensorValue)
 {
-  return(map(sensorValue, 0, 1023, 0, NUM_STEPS-1)); 
+  return(map(sensorValue, 0, 1000, 0, NUM_STEPS-1)); 
 }
 
 
@@ -220,15 +196,11 @@ void logTime_1()
 
 
 void rise1_funct(){//the interrupt service routine. Calls the rise function in the button1 class. Handles the pause button
-  noInterrupts();
-  button_1.rise();  
-  interrupts();
+  button_1.rise(); 
 }
 
 void rise2_funct(){//the interrupt service routine. Calls the rise function in the button2 class. Handles the graph button
-  noInterrupts();
   button_2.rise();
-  interrupts();
 } 
 
 //The algorithm to save the time values into EEPROM memory. Only works with short ints now.

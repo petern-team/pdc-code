@@ -8,7 +8,7 @@ class button {
     int interrupt_pin;
     bool pressed; 
   private:
-    long debounce_delay;
+    static const long debounce_delay = 200;
     volatile int buttonState; 
     volatile long lastDebounceTime; 
     volatile bool switchState; 

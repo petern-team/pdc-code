@@ -7,7 +7,6 @@ character number (sometimes) and all the number pairs.
 #include <IRremote.h>           // IR remote control library
 #include "audioCommPin.h"
 
-boolean comp_transmission; // turns true when a complete audio-wire transmission has been received
 boolean PDC_in_transmission; // uses true to indicate that LEDs need to be switched
 
 const int RECEIVEPIN = 9;     // pin connected to IR detector output
@@ -54,7 +53,6 @@ void setup()
   digitalWrite(greenLED, HIGH);
   
   PDC_in_transmission = false;
-  comp_transmission = false;
   
   // initialize variables and timers for audio-wire communication
   resetStorage();
@@ -75,12 +73,10 @@ void setup()
 
 void loop()
 {
-  
-  comp_transmission = checkTransmission();
   checkLEDstate();
    
   // check for communication through the audio wire  
-  if(comp_transmission) {
+  if(checkTransmission()) {
     parseArray();
     printArray();
     resetStorage();
@@ -90,7 +86,6 @@ void loop()
   long key;
     
   if (irrecv.decode(&results)) {  
-    Serial.println("got something");
     PDC_in_transmission = true;
     Serial.println(results.value, HEX);
     // here if data is received
@@ -112,9 +107,9 @@ void loop()
     }
   }
   
-  if(digitalRead(BUTTONPIN)) {
-    resetVariables();
-  } 
+//  if(digitalRead(BUTTONPIN)) {
+//    resetVariables();
+//  } 
 }
 
 //translate the code to a section on the PDC or a number
@@ -124,8 +119,8 @@ int translateCodes1(long key) {
     digitalWrite(greenLED, LOW);
     digitalWrite(redLED, HIGH);
   
-   if(key == 0 && h_index >= 9)
-     h_index = 0;
+//   if(key == 0 && h_index >= 9)
+//     h_index = 0;
 
    if (key == 10) {
      printTransmission();
@@ -211,12 +206,13 @@ void printTransmission() {
 }
 
 void resetVariables() {
+  Serial.println("RESETTING VARIABLES");
    for(int i=0;i<2;i++) {
      for(int j=0;j<maxNumberOfCodes;j++) {
        transmissionArray[i][j]=0;
      } 
    }
-//  h_index = 0;                  // this can cause problems sometimes !!!!!!
+  h_index = 0;                  // this can cause problems sometimes !!!!!!
   PDC_in_transmission = false;
   v_index=0;
   val=1;
@@ -234,8 +230,7 @@ void checkLEDstate() {
 
 //counts the number of characters in transmissionArray, plus commas and semicolons
 
-int countCharacters(int num_cols)
-{
+int countCharacters(int num_cols) {
   int num_chars=0;
   num_chars=num_cols*4;    // two numbers per column, one comma/semicolon/colon per number
   return num_chars;

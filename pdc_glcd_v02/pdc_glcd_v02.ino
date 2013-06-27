@@ -49,12 +49,13 @@ void setup()
   GLCD.CursorTo(0,0); 
   attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
   attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING); 
+  Serial.println("calling loadscreen");
   load_screen(); 
   for (int i=0; i<MAX_STEPS; i++){
     heights[i]=0;
   }
   
-
+Serial.println("exiting setup");
 }
 void loop() 
 { 
@@ -331,10 +332,11 @@ void get_heights (){
 
 void load_screen(){// This is the code to handle the load screen
   int sensor_val=0;
-  int old_cursor=0; 
+  int old_cursor=-1; 
   while (1){
 	GLCD.CursorTo(0,0);
 	slot=map(analogRead(sensorPin),0,1023,0, 8);
+        Serial.println("here");
 	if (slot!=old_cursor) //logic used to avoid having to clear the screen every iterartion.
         //allows the arduino to remember what the last cursor number it timed was. 
         {       
@@ -342,6 +344,7 @@ void load_screen(){// This is the code to handle the load screen
           old_cursor=slot;
         }
         GLCD.print("Slot     "); GLCD.print(slot+1);
+        Serial.print("slot "); Serial.println(slot+1);
         if (button_1.pressed==true)
         {//load an old time value
           load_times(); 

@@ -53,7 +53,6 @@ class PDCsend {
 
     
   private:
-    
     static const int NUM_COMPS = 5;    // maximum number of single-digit time components (1-99999)
     long transmissionArray[7][MAXPAIRS];  
     
@@ -70,7 +69,7 @@ class PDCsend {
     
     // the number of category-time pairs that can be expected in a transmission
     int number_of_times;              // always intializes to 8 in version 1
-   IRsend irsend;
+    IRsend irsend;
 };
 
 #endif

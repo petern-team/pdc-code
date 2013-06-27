@@ -6,7 +6,7 @@ character number (sometimes) and all the number pairs.
 
 #include <IRremote.h>           // IR remote control library
 
-const int irReceivePin = 10;     // pin connected to IR detector output
+const int irReceivePin = 9;     // pin connected to IR detector output
 const int numberOfKeys = 11;     //  how many keys you want to learn
 const int maxNumberOfCodes = 100;
 const String transmission_sequence = "abcdefg";
@@ -224,10 +224,20 @@ void resetVariables() {
    } 
   }
   
-//  index = 0;                  // this can cause problems sometimes !!!!!!
+  index = 0;                  // this can cause problems sometimes !!!!!!
   in_transmission = false;
   v_index=0;
   val=1;
+}
+
+void checkLEDstate() {
+  if(PDC_in_transmission && digitalRead(greenLED)) {
+    digitalWrite(greenLED, LOW);
+    digitalWrite(redLED, HIGH);
+  } else if(!PDC_in_transmission && digitalRead(redLED)) {
+    digitalWrite(greenLED, HIGH);
+    digitalWrite(redLED, LOW);
+  }
 }
 
 //counts the number of characters in transmissionArray, plus commas and semicolons
@@ -243,15 +253,9 @@ int countCharacters(int num_cols)
  * converts a remote protocol code to a logical key code 
  * (or -1 if no digit received)
  */
-
-int convertCodeToKey(long code)
-{
-
-  for( int i=0; i < numberOfKeys; i++)
-  {
-
-    if( code == irKeyCodes[i])
-    {
+int convertCodeToKey(long code) {
+  for( int i=0; i < NUMCODES; i++) {
+    if( code == irKeyCodes[i]) {
       return i; // found the key so return it
     }
   }

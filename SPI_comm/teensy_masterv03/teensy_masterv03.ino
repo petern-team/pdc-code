@@ -13,6 +13,7 @@ Design Compass screen and timer.
 
 // Write HIGH or LOW to this pin to signal to Arduino when SPI transfer is about to occur
 const int SSPIN = 0;
+const int RECEIVEPIN = 9;
 boolean send_info;
 boolean in_timer;
 int old_case;
@@ -24,6 +25,10 @@ unsigned long time_1sectionTime[8];
 
 // new instance of PDCsend class to send times using IR
 PDCsend myPDC;
+
+// tryna get some IR
+IRrecv irrecv(RECEIVEPIN);
+decode_results results;
 
 void setup() {
   Serial.begin(9600);
@@ -53,6 +58,8 @@ void loop()
   if(send_info) {
      sendSPI();
   }
+  
+  
 }
 
 // This function is called whenever the user presses button 2 from the timer, meaning
