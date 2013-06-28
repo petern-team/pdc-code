@@ -28,12 +28,12 @@ class PDCreceive {
     static const int RECEIVEPIN = 9;
     boolean PDC_in_transmission;
     
-//  private:
+  private:
     static const int maxNumberOfCodes = 100;
     static const int NUMCODES = 11;     //  number of codes in the IR "alphabet"
-//    long key;
+    long key;
     int length;
-//    byte val;
+    byte val;
     long transmissionArray[2][maxNumberOfCodes];
     int h_index;
     int v_index;

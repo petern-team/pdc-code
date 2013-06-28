@@ -8,48 +8,32 @@ character number (sometimes) and all the number pairs.
 #include "audioCommPin.h"
 #include "PDCreceive.h"
 
-boolean comp_transmission; // turns true when a complete audio-wire transmission has been received
-//boolean PDC_in_transmission; // uses true to indicate that LEDs need to be switched
-
-//const int RECEIVEPIN = 9;     // pin connected to IR detector output
-//const int NUMCODES = 11;     //  number of codes in the IR "alphabet"
-//const int maxNumberOfCodes = 100;
 const String transmission_sequence = "abcdefg";
 const int redLED = 3;
 const int greenLED = 2;
 
 PDCreceive DTDreceive;
-long key;
-int val;
-
 IRrecv irrecv(9);    // create the IR library
 decode_results results;
 
-//int length;
-//int val;
-//long transmissionArray[2][maxNumberOfCodes];
-//int h_index;
-//int v_index;
-
-//IRrecv irrecv(RECEIVEPIN);    // create the IR library
-//decode_results results;         // IR data goes here
+boolean comp_transmission; // turns true when a complete audio-wire transmission has been received
 
 void setup()
 {
+  Serial.begin(9600);
+  
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
-  Serial.begin(9600);
  
   digitalWrite(redLED, LOW);
   digitalWrite(greenLED, HIGH);
-  
-//  PDC_in_transmission = false;
+
   comp_transmission = false;
   
   // initialize variables and timers for audio-wire communication
   resetStorage();
   initAudioPin();  
-  val = 1;
+  irrecv.enableIRIn();
   
   // initialize sketch variables
 }
@@ -70,32 +54,10 @@ void loop()
     resetChars();
   }
   
-  if (irrecv.decode(&results)) {  
-    Serial.println("got something");
-    DTDreceive.PDC_in_transmission = true;
-    Serial.println(results.value, HEX);
-    // here if data is received
-    irrecv.resume();
-
-//    showReceivedData();
-    
-    key = DTDreceive.convertCodeToKey(results.value);
-    switch (val) {
-    case 1: 
-      val = DTDreceive.translateCodes1(key);
-      break;
-    case 2: 
-      val = DTDreceive.translateCodes2(key);
-      break;  
-    case 3:
-      val = DTDreceive.translateCodes3(key);
-      break;
-    }
-  }
+  DTDreceive.checkIR(irrecv, results);
   
-  if(digitalRead(BUTTONPIN)) {
-    DTDreceive.resetVariables();
-  } 
+//  if(digitalRead(BUTTONPIN))
+//    DTDreceive.resetVariables();
 }
 
 void checkLEDstate() {

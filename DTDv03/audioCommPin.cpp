@@ -223,7 +223,7 @@ int pow(int base, int power) {
 
 boolean checkTransmission() {
   float seconds = overflow_1600/1600;
-  if((seconds > 0.1 || digitalRead(BUTTONPIN)) && index > 0)
+  if((seconds > 0.1 || digitalRead(BUTTONPIN)) && index > 3)
     return true;
   else
     return false;

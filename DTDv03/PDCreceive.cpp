@@ -12,7 +12,7 @@ PDCreceive::PDCreceive() {
   }
   h_index = 0;
   v_index = 0;
-//  val = 1;
+  val = 1;
   PDC_in_transmission = false;
 }
 
@@ -27,33 +27,33 @@ PDCreceive::PDCreceive(int receive_pin) {
   }
   h_index = 0;
   v_index = 0;
-//  val = 1;
+  val = 1;
   PDC_in_transmission = false;
 }
 
 void PDCreceive::checkIR(IRrecv irrecv, decode_results results) {
-//  if (irrecv.decode(&results)) {  
-//    Serial.println("got something");
-//    PDC_in_transmission = true;
-//    Serial.println(results.value, HEX);
-//    // here if data is received
-//    irrecv.resume();
-//
-////    showReceivedData();
-//    
-//    key = convertCodeToKey(results.value);
-//    switch (val) {
-//    case 1: 
-//      val = translateCodes1(key);
-//      break;
-//    case 2: 
-//      val = translateCodes2(key);
-//      break;  
-//    case 3:
-//      val = translateCodes3(key);
-//      break;
-//    }
-//  }
+  if (irrecv.decode(&results)) {  
+//    Serial.print("got something"); Serial.println(val);
+    PDC_in_transmission = true;
+    Serial.println(results.value, HEX);
+    // here if data is received
+    irrecv.resume();
+
+//    showReceivedData();
+    
+    key = convertCodeToKey(results.value);
+    switch (val) {
+    case 1: 
+      val = translateCodes1(key);
+      break;
+    case 2: 
+      val = translateCodes2(key);
+      break;  
+    case 3:
+      val = translateCodes3(key);
+      break;
+    }
+  } 
 }
 
 //translate the code to a section on the PDC or a number
