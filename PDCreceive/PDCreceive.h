@@ -1,28 +1,28 @@
-// This code handles the reception and interpretation of code on the
-// data transfer device
-
 #ifndef PDCreceive_h
 #define PDCreceive_h
 
 #include "Arduino.h"
 #include <IRremote.h>
-const long irKeyCodes [11] = {
-    0x18E738A7, //numbers, this is 0; index 0-9
-    0x18E748A7,   // 1
+const long irKeyCodes [14] = {
+    0x18E738A7,    //numbers, this is 0; index 0-9
+    0x18E748A7,    // 1
     0x18E768A7,    // 2
-    0x18E778A7,       // 3
-    0x18E788A7,     // 4
-    0x18E798A7,      // 5
-    0x18E718B7,       // 6
+    0x18E778A7,    // 3
+    0x18E788A7,    // 4
+    0x18E798A7,    // 5
+    0x18E718B7,    // 6
     0x18E728B7,    // 7
     0x18E738B7,    // 8
     0x18E758B7,    // 9
-    0x18E7C8E7};         // end of transmission
+    0x18E718C7,    // (comma)
+    0x18E728C7,    // (semicolon)
+    0x18E738C7,    // (colon)
+    0x18E7C8E7};   // end of transmission
 
 class PDCreceive {
 public:
     PDCreceive();
-    PDCreceive(int);
+//    PDCreceive(int);
     
     void checkIR(IRrecv, decode_results);
     void resetVariables();
@@ -31,21 +31,18 @@ public:
     static const int RECEIVEPIN = 9;
     boolean PDC_in_transmission;
     
-    //  private:
+private:
     static const int maxNumberOfCodes = 100;
-    static const int NUMCODES = 11;     //  number of codes in the IR "alphabet"
-    //    long key;
+    static const int NUMCODES = 14;     //  number of codes in the IR "alphabet"
+    long key;
     int length;
-    //    byte val;
-    long transmissionArray[2][maxNumberOfCodes];
-    int h_index;
-    int v_index;
+    byte val;
+    char transmissionArray[100];
+    int index;
     //    decode_results results;         // IR data goes here
     
     int convertCodeToKey(long);
-    int translateCodes1(int);
-    int translateCodes2(int);
-    int translateCodes3(int);
+    void storeData(int key);
     void printTransmission();
 };
 
