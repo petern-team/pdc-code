@@ -14,15 +14,18 @@
 #include "timer.h" //include the timer struct
 #include "button.h" //include the button class
 #include <EEPROM.h>
-#include "PDCsend_v02.h"
+#include <PDCsend.h>
+//#include <../../Tufts/CEEO/summer_13/pdc-code/PDCsend/PDCsend.h>
 #include <IRremote.h>
 
 // create an instance of the PDCsend class, which will handle sending times as
 // IR codes to the teensy docking stations
-PDCsend myPDC(3);
+PDCsend myPDC;
 
 
 int NUM_STEPS=8;// Number of steps in the design process
+const int PRODUCT_ID = 00000;    // later define a different one of these for each component
+const int SEND_TIMES_ID = 001;
 const int MAX_STEPS=12; 
 const int sensorPin = A5; //the pin on the Arduino that the middle (wiper) pin of the potentiometer is connected to
 const int READ_MAX=1023; // the maximum value analogRead can have, used to map the range of values from the potentiometer
@@ -41,12 +44,11 @@ void setup()
 {
   
   Serial.begin(9600); 
+  PDCsend myPDC;
+  Serial.println(myPDC.test_init);
   GLCD.Init(); // start the GLCD code
   GLCD.SelectFont(Arial_14);
   GLCD.CursorTo(0,0); 
-  Serial.println("about to print to screen");
-  GLCD.print("TESTING");
-  Serial.println("done");
   attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
   attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING); 
   load_screen(); 
@@ -60,8 +62,8 @@ void loop()
     GLCD.ClearScreen();
     GLCD.CursorTo(2,2);
     GLCD.print("Sending     Times");
-    myPDC.createArray(time_1.sectionTime);      // myPDC will put all the times and categores in
-    myPDC.sendArray();                          // a 2D array and send it to the docking station
+//    myPDC.createArray(PRODUCT_ID, SEND_TIMES_ID, time_1.sectionTime);      // myPDC will put all the times and categores in
+//    myPDC.sendArray();                          // a 2D array and send it to the docking station
     button_2.pressed=false;
     GLCD.ClearScreen();
   } 

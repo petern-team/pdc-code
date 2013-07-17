@@ -7,6 +7,7 @@ character number (sometimes) and all the number pairs.
 #include <IRremote.h>           // IR remote control library
 #include "audioCommPin.h"
 #include "PDCreceive.h"
+//#include "../../../Tufts/CEEO/summer_13/pdc-code/PDCreceive/PDCreceive.h"
 
 const String transmission_sequence = "abcdefg";
 const int redLED = 3;

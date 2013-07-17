@@ -31,6 +31,7 @@ int slot=0;
 String step_list[MAX_STEPS] = {"Define     Problem","Research","Brainstorm","Select",
               "Construct","Test","Communicate","Redesign","","","",""};
 int old_case; 
+volatile boolean new_info;
 volatile boolean button_1pressed;
 volatile boolean button_2pressed;
 volatile int sensorValue;
@@ -41,6 +42,7 @@ volatile int sensorValue;
 
 int SPI_in[100];
 boolean sending_times;
+boolean display_sending;
 volatile byte pos;
 int send_pos;
 volatile boolean SPI_complete;
@@ -51,6 +53,7 @@ volatile boolean SPI_complete;
 // and sensorValue. At the end of each triplet will be a sentinel (-1)
 ISR (SPI_STC_vect)
 {
+  new_info = true;
   char input = SPDR;
   
   // if the teensy is about to send times, ignore the usual protocol and send teensy
@@ -61,6 +64,7 @@ ISR (SPI_STC_vect)
     if(send_pos == 8) {
       send_pos = 0; 
       sending_times = false;
+      display_sending = true;
     }
   } else {
   
@@ -82,6 +86,7 @@ ISR (SPI_STC_vect)
 //--------------------------------------------------------------------------------
 
 void setup() {
+//  new_info = false;
   // all of the following is SPI stuff-------------------------------------------------
   // attach SPI interrupts and set "slave out" as an output
   SPI.attachInterrupt();
@@ -93,6 +98,7 @@ void setup() {
   pos=0;
   send_pos=0;
   sending_times = false;
+  display_sending = false;
   SPI_complete = false;
   
   Serial.begin(9600); 
@@ -102,7 +108,6 @@ void setup() {
   load_screen();
   
   old_case = -1;
-
 }
 
 
@@ -113,10 +118,26 @@ void loop() {
   
   //------------------------ BEGIN DESIGN COMPASS CODE --------------------------------
 
+// if the teensy is busy sending times, display "sending times" for 3 seconds
+if(display_sending) {
+  GLCD.ClearScreen();
+  GLCD.CursorTo(2,2);
+  GLCD.print("Sending     Times");
+  delay(3000);
+  GLCD.ClearScreen();
+  display_sending = false;
+}
+
+//if(new_info) {
+//  Serial.println("new info");
+//  new_info = false;
+//}
+  
+
 // if button 2 was pressed from the timer, display the menu and interpret results
 if (button_2pressed) { 
     button_1pressed = false;    // reset both buttons
-    button_2pressed=false;
+    button_2pressed = false;
     
     // display menu returns whichever option was selected
     int menuSelect = displayMenu();
@@ -131,8 +152,6 @@ if (button_2pressed) {
       case 1:
         Serial.println("send times");
         sending_times = true;
-//        myPDC.createArray(time_1.sectionTime);    // these two cause memory problems
-//        myPDC.sendArray();
         break;
       case 2:
         Serial.println("draw graph");

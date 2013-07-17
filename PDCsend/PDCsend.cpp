@@ -1,6 +1,6 @@
 //
 //  PDCsend.cpp
-//  
+//
 //
 //  Created by Marc Bucchieri on 6/28/13.
 //
@@ -13,8 +13,10 @@
 // initialize transmissionArray to all zeros
 PDCsend::PDCsend() {
     number_of_times = 8;              // always intializes to 8 in version 1
-    for(int i=0;i<7;i++) {      // initialize transmissionArray to all zeros
-        for(int j=0;j<MAXPAIRS;j++) {
+    //    test_init = 13;
+//    Serial.println("initializing, and got the right one");
+    for(int i=0;i<6;i++) {      // initialize transmissionArray to all zeros
+        for(int j=0;j<MAXPAIRS*2+3;j++) {
             transmissionArray[i][j]=0;
         }
     }
@@ -22,7 +24,6 @@ PDCsend::PDCsend() {
 
 // initialize transmissionArray to all zeros and set the specified pin number as an input pin
 PDCsend::PDCsend(int inPin) {
-    
     pinMode(inPin, INPUT);
     number_of_times = 8;              // always intializes to 8 in version 1
     for(int i=0;i<7;i++) {      // initialize transmissionArray to all zeros
@@ -33,16 +34,21 @@ PDCsend::PDCsend(int inPin) {
 }
 
 // print the transmissionArray line by line to serial (used for debugging purposes)
+// !!! adjust for new arrray size !!!
+
 void PDCsend::printTransmission() {
-    for(int i=0;i<7;i++) {
-        for(int j=0;j<8;j++) {
-            if(j == 7) {
-                Serial.println(transmissionArray[i][j], HEX);
+    long the_code;
+    for(int i=0;i<6;i++) {
+        for(int j=0;j<number_of_times*2+3;j++) {
+            the_code = transmissionArray[i][j];
+            if(the_code < 9) {
+                Serial.print(the_code, HEX);
             } else {
-                Serial.print(transmissionArray[i][j], HEX);
-                Serial.print("   ");
+                Serial.print(convertCodeToKey(the_code));
             }
+            Serial.print("   ");
         }
+        Serial.println();
     }
 }
 
@@ -52,128 +58,155 @@ void PDCsend::printTransmission() {
 // columns 3-7 contain the digits that make up the time value. (ones go in column 3, tens go in
 // column 4, etc.)
 
-void PDCsend::createArray(unsigned long time_array[]) {
+void PDCsend::createArray(long product_id, int trans_id, unsigned long time_array[]) {
     Serial.println("create array called");
+    int column_index;
     
-    int time_components[NUM_COMPS];
-    
-    // write the number of caegory-time pairs into the last index of the array, paired with category 0
-    breakItDown(number_of_times, time_components);
-    int length = checkLength(time_components);           // in version 1, always returns 1 because there are
-    // always 8 categories
-    transmissionArray[0][MAXPAIRS-1]=irKeyCodes[0];        // first pair sent will be 0, # of characters
-    transmissionArray[1][MAXPAIRS-1]=length;
-    
-    for(int i=0;i<length;i++) {
-        transmissionArray[i+2][MAXPAIRS-1] = irKeyCodes[time_components[i]];
-    }
-    
+    // first write the triplet of product id, transmission id, checksum
+    Serial.print("calling writecolumn with product_id: "); Serial.println(product_id);
+    writeColumn(0, product_id);
+    writeColumn(1, trans_id);
+    writeColumn(2, findCheckSum(time_array));
     
     // this is the main loop for writing times into the array
     for (int i=0; i<number_of_times; i++) {
-        long theTime = time_array[i];
-        breakItDown(theTime, time_components);
-        int length = checkLength(time_components);
+        //        int theTime = time_array[i];
+        column_index = (i*2)+3;
+        writeColumn(column_index, i+1);      // first of the pair will be the category number
+        writeColumn(++column_index, time_array[i]);
         
-        // store stuff in the current column of the matrix
-        transmissionArray[0][i] = irKeyCodes[i+1];    //store the ID of the category
-        transmissionArray[1][i] = length;             // length is the only one that remains a number
-        
-        // this next block of code stores the digits for the next time value descending
-        //in the selected column of transmissionArray, from ones to thousands
-        for(int j=0;j<length; j++) {
-            transmissionArray[j+2][i]=irKeyCodes[time_components[j]];
-        }
     }
 }
 
 // this functions sends the IR codes stored in transmissionArray to the docking station
 void PDCsend::sendArray() {
     int length;
+    int column_index;
     
-    // this next block of code sends the pair (0, number of times) so the receiver knows how many to
-    // wait for
+    // first send the product ID, transmission ID, and checksum separated by commas and
+    // followed by a semicolon
     
-    irsend.sendSony(transmissionArray[0][MAXPAIRS-1], 32);
-    Serial.print(transmissionArray[0][MAXPAIRS-1], HEX);Serial.print(", ");
-    delay(50);
-    
-    length = transmissionArray[1][MAXPAIRS-1];
-    irsend.sendSony(irKeyCodes[length], 32);
-    Serial.print(irKeyCodes[length], HEX);Serial.print(", ");
-    delay(50);
-    
-    for(int i=0;i<length;i++) {
-        irsend.sendSony(transmissionArray[i+2][MAXPAIRS-1], 32);
-        Serial.println(transmissionArray[i+2][MAXPAIRS-1], HEX);
-        delay(50);
+    for(int i=0; i<3; i++) {
+        sendColumn(i);
+        if(i == 2) {            // send a semicolon or a comma after each number
+            irsend.sendSony(irKeyCodes[11], 32);
+            delay(50);
+        } else {
+            irsend.sendSony(irKeyCodes[10], 32);
+            delay(50);
+        }
     }
     
     // these nested for loops send the categories and times from the rest of transmissionArray
     
-    for (int i=0; i<number_of_times; i++) {         //i is the index of the column being sent
-        
-        irsend.sendSony(transmissionArray[0][i], 32);
+    for (int i=0; i<number_of_times; i++) {
+        column_index = (i*2)+3;
+        sendColumn(column_index);
+        irsend.sendSony(irKeyCodes[10], 32);        // comma
         delay(50);
-        length = transmissionArray[1][i];
-        irsend.sendSony(irKeyCodes[length], 32);
+        sendColumn(++column_index);
+        irsend.sendSony(irKeyCodes[11], 32);        // semicolon
         delay(50);
-        
-        for (int j=0; j<length; j++) {                //j is the index of the row being sent
-            irsend.sendSony(transmissionArray[j+2][i], 32);
-            delay(50);
-        }
-        
-        if(i == 7) {
-            irsend.sendSony(irKeyCodes[10], 32);            //end of transmission
-            delay(50);
-        }
     }
+    irsend.sendSony(irKeyCodes[12], 32);            // colon means end of transmission
+}
+
+// writeColumn takes a column index and an integer and writes each digit of the integer
+// into a different row of te column
+
+void PDCsend::writeColumn(int index, long data) {
+    Serial.print("index "); Serial.print(index); Serial.print(": ");
+    Serial.print(data); Serial.print(", ");
+    int time_components[NUM_COMPS];
+    int length;
+    breakItDown(data, time_components);
+    length = checkLength(time_components);
+    transmissionArray[0][index] = length;
+//    long reconstruct = 0;
+    
+    
+    for(int i=1;i<=length;i++) {
+        transmissionArray[i][index]=irKeyCodes[time_components[i-1]];
+//        Serial.print("index"); Serial.print(index); Serial.print(": ");
+//        Serial.println(transmissionArray[i][index], HEX);
+    }
+//    for(int i=0;i<length;i++) {
+//        reconstruct += convertCodeToKey(transmissionArray[i][index]) * pow(10, i);
+//    }
+//    Serial.println(reconstruct); reconstruct = 0;
+}
+
+// sendColumn takes a column index as an argument and send the numbers in that column
+// using the sendSony IR protocol
+
+void PDCsend::sendColumn(int index) {
+    int length = transmissionArray[0][index];
+//    Serial.print("send length: "); Serial.println(length);
+    for(int j=1;j<=length;j++) {
+//        Serial.println(transmissionArray[j][index], HEX);
+        irsend.sendSony(transmissionArray[j][index], 32);
+        delay(50);
+    }
+}
+
+// findCheckSum checks the time_array to determine how many number will be sent, not
+// including the first triplet
+
+int PDCsend::findCheckSum(unsigned long time_array[]) {
+    int checksum = 0;
+    for(int i=0;i<number_of_times;i++) {
+        checksum += checkIntLength(time_array[i]);
+    }
+    return checksum;
 }
 
 //breakItDown: assign each digit of a number to a spot in the time_components array
 // thousands goes in time_components[3], hundreds goes in time_components[2], etc.
 
 void PDCsend::breakItDown(long seconds, int time_components[NUM_COMPS]) {
-    
-    long seconds_comp;
-    
-    for(int i=NUM_COMPS-1;i>=0;i--) {
-        long comp_factor=1;
-        for(int j=0;j<i;j++) {
-            comp_factor = comp_factor*10;
-        }
-        
-        seconds_comp = seconds/comp_factor;
-        if(seconds_comp != 0)
-            time_components[i] = seconds_comp;
-        else
-            time_components[i] = 0;
-        
-        seconds -= time_components[i]*comp_factor;
+    for(int i=0;i<NUM_COMPS;i++) {
+        time_components[i] = ((seconds%(pow(10,i+1)))/pow(10,i));
     }
 }
 
 // returns the number of digits in the time value as determined by time_components
 
-int PDCsend::checkLength(int time_components[NUM_COMPS])
-{
+int PDCsend::checkLength(int time_components[NUM_COMPS]) {
     for(int i=(NUM_COMPS-1);i>0;i--) {
         if(time_components[i] != 0) {
-            return i+1; 
+            return i+1;
         }
     }
     return 1;
 }
 
-int PDCsend::convertCodeToKey(long code)
-{     
+int PDCsend::checkIntLength(int item) {
+    if(item < 10)
+        return 1;
+    if(item < 100)
+        return 2;
+    if(item < 1000)
+        return 3;
+    if(item < 10000)
+        return 4;
+    return 5;
+}
+
+int PDCsend::convertCodeToKey(long code) {
     
-    for( int i=0; i < 11; i++)  {
+    for( int i=0; i < 14; i++)  {
         if( code == irKeyCodes[i])   {
             return i; // found the key so return it
         }
     }
     return -1;
+}
+
+long PDCsend::pow(int base, int power) {
+    long ans = 1;
+    for(int i=0;i<power;i++) {
+        ans *= base;
+    }
+    return ans;
 }
 

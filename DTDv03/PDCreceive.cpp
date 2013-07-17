@@ -157,9 +157,9 @@ void PDCreceive::resetVariables() {
        transmissionArray[i][j]=0;
      } 
    }
-//  h_index = 0;                  // this can cause problems sometimes !!!!!!
+  h_index = 0;                  // this can cause problems sometimes !!!!!!
   PDC_in_transmission = false;
   v_index=0;
-//  val=1;
+  val=1;
 }
   

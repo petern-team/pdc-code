@@ -1,19 +1,23 @@
+#include <PDCsend.h>
 /*
 By: Marc Bucchieri
 Contributions: http://www.gammon.com.au/forum/?id=10892&reply=1#reply1 for SPI code
 
 Code for Teensy to act as SPI master for an Arduino slave that controls the Physical
 Design Compass screen and timer. 
-*/
+*/  
 
 #include <SPI.h>
 #include "button.h"
-#include "PDCsend_v02.h"
+//#include "PDCsend_v02.h"
 #include <IRremote.h>
+
 
 // Write HIGH or LOW to this pin to signal to Arduino when SPI transfer is about to occur
 const int SSPIN = 0;
 const int RECEIVEPIN = 9;
+const long PRODUCT_ID = 73201; //"=> PDC01"
+const int SEND_TIMES_ID = 001;
 boolean send_info;
 boolean in_timer;
 int old_case;
@@ -21,7 +25,8 @@ int timeOfLast;
 button button_1(0);
 button button_2(1); 
 const int sensorPin = A0;
-unsigned long time_1sectionTime[8];
+unsigned long time_1sectionTime[15];
+unsigned long test_arr[] = {1,2,3,4,5,6,7,8};
 
 // new instance of PDCsend class to send times using IR
 PDCsend myPDC;
@@ -32,6 +37,12 @@ decode_results results;
 
 void setup() {
   Serial.begin(9600);
+//  PDCsend myPDC;
+  Serial.println("made it to setup!");
+//  myPDC.createArray(73201, 1, test_arr);
+//  Serial.println("done creating array");
+  pinMode(10, OUTPUT);
+  digitalWrite(10, HIGH);
   SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV8);
   pinMode(SSPIN, OUTPUT);
@@ -58,8 +69,6 @@ void loop()
   if(send_info) {
      sendSPI();
   }
-  
-  
 }
 
 // This function is called whenever the user presses button 2 from the timer, meaning
@@ -209,7 +218,7 @@ void sendSPI()
     digitalWrite(SSPIN, LOW);
     
     for(int i=0;i<4;i++) {
-//      Serial.print(output[i]+0); Serial.print(", ");
+      Serial.print(output[i]+0); Serial.print(", ");
       SPI.transfer(output[i]);
       delay(1);
     }
@@ -245,7 +254,9 @@ void sendTimes()
   }
     digitalWrite(SSPIN, HIGH);
     
-    myPDC.createArray(time_1sectionTime);      // myPDC will put all the times and categores in
+    Serial.println("about to call createArray");
+    myPDC.createArray(PRODUCT_ID, SEND_TIMES_ID, time_1sectionTime);      // myPDC will put all the times and categores in
+    myPDC.printTransmission();
     myPDC.sendArray();                          // a 2D array and send it to the docking station
     button_1.pressed = false;
     button_2.pressed = false;

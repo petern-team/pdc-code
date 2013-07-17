@@ -1,5 +1,3 @@
-//#include <SPI.h>
-
 /*
  Dominic Guri
  Andrew Whitehead
