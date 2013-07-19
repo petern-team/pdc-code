@@ -3,6 +3,9 @@
 
 #include "Arduino.h"
 #include <IRremote.h>
+
+#ifndef IRKEYCODES
+#define IRKEYCODES
 const long irKeyCodes [14] = {
     0x18E738A7,    //numbers, this is 0; index 0-9
     0x18E748A7,    // 1
@@ -19,31 +22,39 @@ const long irKeyCodes [14] = {
     0x18E738C7,    // (colon)
     0x18E7C8E7};   // end of transmission
 
+const char keyIndex[13] = {'0','1','2','3','4','5','6','7','8','9',',',';',':'};
+#endif
+
 class PDCreceive {
 public:
     PDCreceive();
+    PDCreceive(long product);
 //    PDCreceive(int);
     
     void checkIR(IRrecv, decode_results);
+    void printTransmission();
     void resetVariables();
+    char getChar(int index);
     
     static const int MAXPAIRS = 20;
     static const int RECEIVEPIN = 9;
-    boolean PDC_in_transmission;
+    int PRODUCT_ID;
+    bool PDC_in_transmission;
+    bool transmission_complete;
+    bool PDC_sync;
     
 private:
     static const int maxNumberOfCodes = 100;
     static const int NUMCODES = 14;     //  number of codes in the IR "alphabet"
     long key;
     int length;
-    byte val;
     char transmissionArray[100];
     int index;
     //    decode_results results;         // IR data goes here
     
+    bool syncCodeRecvd();
     int convertCodeToKey(long);
     void storeData(int key);
-    void printTransmission();
 };
 
 #endif

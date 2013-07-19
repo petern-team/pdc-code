@@ -148,6 +148,7 @@ void runMenu()
 // product ID which the DtD will return if it receives it
 
 void runSyncScreen() {
+  boolean quit = false;
   Serial.println("run sync screen");
     pdcSend.sendSyncCode(PRODUCT_ID);
   for(int i=0;(i<4 && !pdcReceive.PDC_sync);i++) {
@@ -161,9 +162,16 @@ void runSyncScreen() {
   if(!pdcReceive.PDC_sync) {
     Serial.println("No DTD found");
     sendSPIdata(31);
+    return
   } else {
     Serial.println("found it!");
     sendSPIdata(30);
+  }
+  
+  // goes here if sync was successful
+  while(!quit) {
+    if(pdcReceive.transmission_complete) {
+      parseTransmission();
   }
 
   Serial.println("leaving runsyncscreen");
@@ -224,6 +232,13 @@ void rise2_funct(){
   button_2.rise(); 
   send_info = true; 
   interrupts();
+}
+
+// parseTransmission takes a completed transmission character by character and parses it into 
+// useful information to tell the PDC what to do
+
+void parseTransmission() {
+  
 }
 
 // check the potentiometer position and map to a number between 0 and 24 so that it can

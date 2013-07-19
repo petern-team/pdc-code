@@ -10,6 +10,22 @@ PDCreceive::PDCreceive() {
     }
     index = 0;
     PDC_in_transmission = false;
+    transmission_complete = false;
+    PDC_sync = false;
+}
+
+PDCreceive::PDCreceive(long product) {
+    pinMode(RECEIVEPIN, INPUT);
+    //  irrecv.enableIRIn();              // Start the IR receiver
+    
+    for(int i=0;i<100;i++) {
+        transmissionArray[i]='-';
+    }
+    index = 0;
+    PDC_in_transmission = false;
+    transmission_complete = false;
+    PDC_sync = false;
+    PRODUCT_ID = product;
 }
 
 //PDCreceive::PDCreceive(int receive_pin) {
@@ -29,7 +45,7 @@ PDCreceive::PDCreceive() {
 
 void PDCreceive::checkIR(IRrecv irrecv, decode_results results) {
     if (irrecv.decode(&results)) {
-        //    Serial.print("got something"); Serial.println(val);
+        Serial.println("got something");
         PDC_in_transmission = true;
         Serial.println(results.value, HEX);
         // here if data is received
@@ -48,33 +64,69 @@ void PDCreceive::printTransmission() {
     Serial.println("print transmission called");
     Serial.print("index = "); Serial.println(index);
     //   delay(10);
+    if(syncCodeRecvd()) {
+        PDC_sync = true;
+    } else {
     
-    for (int i=0; i<index; i++) {
-        Keyboard.print(transmissionArray[i]);
+        for (int i=0; i<index; i++) {
+            Serial.print(transmissionArray[i]);
+        }
     }
     resetVariables();
 }
 
-void PDCreceive::storeData(int key) {
-    if(key < 10) {
-        transmissionArray[index] = '0'+key;
-    } else {
-        Serial.print("switchCase: "); Serial.println(key);
-        switch (key) {
-            case 10:
-                transmissionArray[index] = ',';
-                break;
-            case 11:
-                transmissionArray[index] = ';';
-                break;
-            case 12:
-                transmissionArray[index] = ':';
-                printTransmission();
-                return;
-        }
+//check if the transmission received is a valid product ID
+bool PDCreceive::syncCodeRecvd() {
+    String my_id = "";
+    if(index > 7)
+        return false;
+    for(int i=0;i<index;i++) {
+        my_id += transmissionArray[i];
+        if(transmissionArray[i] == ',' || transmissionArray[i] == ';')
+            return false;
     }
+//    if(my_id == String(PRODUCT_ID)+':') {
+//        Serial.print(my_id); Serial.print(": "); Serial.println(String(PRODUCT_ID)+':');
+//        return false;
+//    } else {
+       return true;
+//    }
+}
+
+// storeData replaced the translatedCode functions, it simply translates the index
+// of an IR code into a character and changes transmission_complete to true when it
+// finds a colon
+
+void PDCreceive::storeData(int key) {
+    
+    transmissionArray[index] = keyIndex[key];
+    if(key == 12) {
+        transmission_complete = true;
+        return;
+    }
+//    if(key < 10) {
+//        transmissionArray[index] = '0'+key;
+//    } else {
+//        Serial.print("switchCase: "); Serial.println(key);
+//        switch (key) {
+//            case 10:
+//                transmissionArray[index] = ',';
+//                break;
+//            case 11:
+//                transmissionArray[index] = ';';
+//                break;
+//            case 12:
+//                transmissionArray[index] = ':';
+//                transmission_complete = true;
+////                printTransmission();
+//                
+//                return;
+//        }
+//    }
     index++;
 }
+
+// getChar
 
 int PDCreceive::convertCodeToKey(long code) {
     for( int i=0; i < NUMCODES; i++) {
@@ -91,6 +143,5 @@ void PDCreceive::resetVariables() {
     }
     index = 0;                  // this can cause problems sometimes !!!!!!
     PDC_in_transmission = false;
-    v_index=0;
-    val=1;
+    transmission_complete = false;
 }

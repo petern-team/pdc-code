@@ -1,3 +1,10 @@
+/* Features to be teseted:
+- new char_arr configuration and pointer functions
+- switched irrecv to 8
+- added sendCharArray to PDCsend
+- changed PDCreceive to have a transmission_complete variable (seems to work)
+
+
 /*
 This sketch decodes IR messages written with category/ time pairs.
 Then it prints an opening sequence to the computer, followed by a 
@@ -20,13 +27,12 @@ int char_index;
 
 PDCreceive DTDreceive(PRODUCT_ID);
 PDCsend DTDsend;
-IRrecv irrecv(9);    // create the IR library
+IRrecv irrecv(8);    // create the IR library
 decode_results results;
 
 boolean comp_transmission; // turns true when a complete audio-wire transmission has been received
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
   
   pinMode(redLED, OUTPUT);
@@ -47,8 +53,7 @@ void setup()
 
 
 
-void loop()
-{
+void loop() {
   
   comp_transmission = checkTransmission();
   checkLEDstate();
@@ -57,11 +62,17 @@ void loop()
   if(comp_transmission) {
     parseArray(comp_char_arr, &char_index);
     printArray(comp_char_arr, &char_index);
+    
+    // maybe should add a way to check if the PDC is syncing before sending info
+    DTDsend.sendCharArray(comp_char_arr, char_index);      // TEST THIS
     resetStorage();
     resetChars();
   }
   
   DTDreceive.checkIR(irrecv, results);
+  if(DTDreceive.transmission_complete) {
+    DTDreceive.printTransmission();
+  }
   
   if(DTDreceive.PDC_sync) {
     Serial.println("sending sync codes");
@@ -75,6 +86,9 @@ void loop()
 //  if(digitalRead(BUTTONPIN))
 //    DTDreceive.resetVariables();
 }
+
+
+
 
 void checkLEDstate() {
   if(DTDreceive.PDC_in_transmission && digitalRead(greenLED)) {

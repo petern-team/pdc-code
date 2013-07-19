@@ -111,6 +111,36 @@ void PDCsend::sendArray() {
     irsend.sendSony(irKeyCodes[12], 32);            // colon means end of transmission
 }
 
+// sendCharArray is meant to pass along a character array sent from the computer to
+// the PC
+
+void PDCsend::sendCharArray(char char_arr[], int length) {
+    long code;
+    for(int i=0;i<length;i++) {
+        code = convertCharToCode(char_arr[i]);
+        Serial.println(code, HEX);
+        irsend.sendSony(code, 32);
+        delay(50);
+    }
+}
+
+// sendSyncCode sends the product_id followed by a colon. Devices will generally
+// keep sending this as a test until they get a reply from the DTD
+
+void PDCsend::sendSyncCode(long product_id) {
+    int ID_components[NUM_COMPS] = {0,0,0,0,0};
+    int length = checkIntLength(product_id);
+    breakItDown(product_id, ID_components);
+    
+    for(int i=length-1;i>=0;i--) {
+        irsend.sendSony(irKeyCodes[ID_components[i]], 32);
+        delay(50);
+    }
+//    Serial.println();
+    irsend.sendSony(irKeyCodes[12], 32);
+}
+
+
 // writeColumn takes a column index and an integer and writes each digit of the integer
 // into a different row of te column
 
@@ -142,12 +172,13 @@ void PDCsend::writeColumn(int index, long data) {
 void PDCsend::sendColumn(int index) {
     int length = transmissionArray[0][index];
 //    Serial.print("send length: "); Serial.println(length);
-    for(int j=1;j<=length;j++) {
+    for(int i=length;i>=1;i--) {
 //        Serial.println(transmissionArray[j][index], HEX);
-        irsend.sendSony(transmissionArray[j][index], 32);
+        irsend.sendSony(transmissionArray[i][index], 32);
         delay(50);
     }
 }
+
 
 // findCheckSum checks the time_array to determine how many number will be sent, not
 // including the first triplet
@@ -180,7 +211,7 @@ int PDCsend::checkLength(int time_components[NUM_COMPS]) {
     return 1;
 }
 
-int PDCsend::checkIntLength(int item) {
+int PDCsend::checkIntLength(long item) {
     if(item < 10)
         return 1;
     if(item < 100)
@@ -199,6 +230,16 @@ int PDCsend::convertCodeToKey(long code) {
             return i; // found the key so return it
         }
     }
+    return -1;
+}
+
+long PDCsend::convertCharToCode(char the_char) {
+    for(int i=0;i<13;i++) {
+        if(the_char == keyIndex[i]) {
+            return irKeyCodes[i];
+        }
+    }
+    Serial.println("error no code found");
     return -1;
 }
 

@@ -13,6 +13,8 @@
 #include <IRremote.h>
 
 
+#ifndef IRKEYCODES
+#define IRKEYCODES
 const long irKeyCodes [14] = {
     0x18E738A7,    //numbers, this is 0; index 0-9
     0x18E748A7,    // 1
@@ -24,10 +26,13 @@ const long irKeyCodes [14] = {
     0x18E728B7,    // 7
     0x18E738B7,    // 8
     0x18E758B7,    // 9
-    0x18E718C7,    // (comma) - 10
-    0x18E728C7,    // (semicolon) - 11
-    0x18E738C7,    // (colon) - 12
-    0x18E7C8E7};   // end of transmission - probably won't be used anymore
+    0x18E718C7,    // (comma)
+    0x18E728C7,    // (semicolon)
+    0x18E738C7,    // (colon)
+    0x18E7C8E7};   // end of transmission
+
+const char keyIndex[13] = {'0','1','2','3','4','5','6','7','8','9',',',';',':'};
+#endif
 
 class PDCsend {
 public:
@@ -39,11 +44,14 @@ public:
     // all createArray functions take in a list of times and put them in a 2D array to be sent
     // to the docking station
     void createArray(long product_id, int trans_id, unsigned long time_array[]);
+    void createArray(long product_id, int trans_id, char info_array[]);
     void createArray(unsigned long time_array[],unsigned int cat_array[]);
-    void createArray(long cat_time_array[][MAXPAIRS]);
+//    void createArray(long cat_time_array[][MAXPAIRS]);
     
     // send all of the times to the docking station using IR codes
     void sendArray();
+    void sendCharArray(char char_arr[], int length);
+    void sendSyncCode(long);
     
     
     // debugging function used to print transmissionArray to serial on the PDC
@@ -63,7 +71,7 @@ private:
     // check length takes in the array of time components and returns the number of digits
     // in the time value
     int checkLength(int[]);
-    int checkIntLength(int);
+    int checkIntLength(long);
     
     void writeColumn(int index, long data);
     void sendColumn(int index);
@@ -77,6 +85,7 @@ private:
     
     // translates an IR code to its index in the irKeyCodes array
     int convertCodeToKey(long);
+    long convertCharToCode(char);
     long pow(int, int);
     
     // the number of category-time pairs that can be expected in a transmission
