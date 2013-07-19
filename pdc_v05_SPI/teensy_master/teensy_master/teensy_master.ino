@@ -1,4 +1,4 @@
-#include <PDCsend.h>
+
 /*
 By: Marc Bucchieri
 Contributions: http://www.gammon.com.au/forum/?id=10892&reply=1#reply1 for SPI code
@@ -11,6 +11,8 @@ Design Compass screen and timer.
 #include "button.h"
 //#include "PDCsend_v02.h"
 #include <IRremote.h>
+#include <PDCsend.h>
+#include <PDCreceive.h>
 
 
 // Write HIGH or LOW to this pin to signal to Arduino when SPI transfer is about to occur
@@ -29,7 +31,8 @@ unsigned long time_1sectionTime[15];
 unsigned long test_arr[] = {1,2,3,4,5,6,7,8};
 
 // new instance of PDCsend class to send times using IR
-PDCsend myPDC;
+PDCsend pdcSend;
+PDCreceive pdcReceive;
 
 // tryna get some IR
 IRrecv irrecv(RECEIVEPIN);
@@ -37,16 +40,18 @@ decode_results results;
 
 void setup() {
   Serial.begin(9600);
-//  PDCsend myPDC;
+//  PDCsend pdcSend;
   Serial.println("made it to setup!");
-//  myPDC.createArray(73201, 1, test_arr);
+//  pdcSend.createArray(73201, 1, test_arr);
 //  Serial.println("done creating array");
-  pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH);
+//  pinMode(10, OUTPUT);
+//  digitalWrite(10, HIGH);
   SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV8);
   pinMode(SSPIN, OUTPUT);
   in_timer = true;
+  
+  irrecv.enableIRIn();
   
   old_case = -1;
   send_info = false;
@@ -110,13 +115,14 @@ void runMenu()
           break;
           
         case 1:
-          Serial.println("sending times");
+          Serial.println("computer sync menu");
           sendSPI();
-          sendTimes();
-          for(int i=0;i<8;i++) {
-            Serial.print(time_1sectionTime[i]); Serial.print(", ");
-          }
-          Serial.println();
+          runSyncScreen();
+//          sendTimes();
+//          for(int i=0;i<8;i++) {
+//            Serial.print(time_1sectionTime[i]); Serial.print(", ");
+//          }
+//          Serial.println();
           break;
           
         case 2:
@@ -136,6 +142,31 @@ void runMenu()
     }
   }
   Serial.println("returning from runMenu");
+}
+
+// runSyncScreen will handle Dtd <-> PDC interaction, beginning by sending a message with the 
+// product ID which the DtD will return if it receives it
+
+void runSyncScreen() {
+  Serial.println("run sync screen");
+    pdcSend.sendSyncCode(PRODUCT_ID);
+  for(int i=0;(i<4 && !pdcReceive.PDC_sync);i++) {
+    for(int j=0;(j<150 && !pdcReceive.PDC_sync);j++) {
+      pdcReceive.checkIR(irrecv, results);
+      delay(20);
+    }
+    
+  }
+  
+  if(!pdcReceive.PDC_sync) {
+    Serial.println("No DTD found");
+    sendSPIdata(31);
+  } else {
+    Serial.println("found it!");
+    sendSPIdata(30);
+  }
+
+  Serial.println("leaving runsyncscreen");
 }
 
 // The load screen is displayed when the PDC is turned on and when the user selects
@@ -198,9 +229,11 @@ void rise2_funct(){
 // check the potentiometer position and map to a number between 0 and 24 so that it can
 // be sent as a byte
 
+// CHECK CALIBRATION FOR DIFFERENT POTS
+
 int sensorValue() 
 {
-   return map(analogRead(sensorPin), 0, 1023, 0, 24); 
+   return map(analogRead(sensorPin), 0, 910, 0, 24); 
 }
 
  //maps the analog read output to a new number
@@ -237,6 +270,25 @@ void sendSPI()
     delay(50);
 }
 
+// sendSPIdata works the same as SendSPI() but replaces the sensor Value with a code to give the
+// PDC instructions. So far this is only used when syncing with the docking station
+
+void sendSPIdata(int data)
+{
+    char output[] = {button_1.pressed,button_2.pressed,data,-1};
+    digitalWrite(SSPIN, LOW);
+    
+    for(int i=0;i<4;i++) {
+      Serial.print(output[i]+0); Serial.print(", ");
+      SPI.transfer(output[i]);
+      delay(1);
+    }
+    Serial.println();
+    
+    digitalWrite(SSPIN, HIGH);
+    delay(50);
+}
+
 // If "Send Data" has been selected in the menu, get the timer values from Arduino
 // and send them using the PDCsend class
 
@@ -255,9 +307,9 @@ void sendTimes()
     digitalWrite(SSPIN, HIGH);
     
     Serial.println("about to call createArray");
-    myPDC.createArray(PRODUCT_ID, SEND_TIMES_ID, time_1sectionTime);      // myPDC will put all the times and categores in
-    myPDC.printTransmission();
-    myPDC.sendArray();                          // a 2D array and send it to the docking station
+    pdcSend.createArray(PRODUCT_ID, SEND_TIMES_ID, time_1sectionTime);      // pdcSend will put all the times and categores in
+    pdcSend.printTransmission();
+    pdcSend.sendArray();                          // a 2D array and send it to the docking station
     button_1.pressed = false;
     button_2.pressed = false;
     

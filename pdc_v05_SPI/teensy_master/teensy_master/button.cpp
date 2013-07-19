@@ -19,7 +19,6 @@ void button::rise(){
   {
     lastDebounceTime = currentTime;
     pressed=!pressed; 
-    Serial.print("button "); Serial.print(interrupt_pin+1); Serial.print(": "); Serial.println(pressed);
   }
 }
 

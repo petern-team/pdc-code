@@ -15,6 +15,9 @@ const long PRODUCT_ID = 38301; //"DTD01"
 const int redLED = 3;
 const int greenLED = 2;
 
+char comp_char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy
+int char_index;
+
 PDCreceive DTDreceive(PRODUCT_ID);
 PDCsend DTDsend;
 IRrecv irrecv(9);    // create the IR library
@@ -52,8 +55,8 @@ void loop()
    
   // check for communication through the audio wire  
   if(comp_transmission) {
-    parseArray();
-    printArray();
+    parseArray(comp_char_arr, &char_index);
+    printArray(comp_char_arr, &char_index);
     resetStorage();
     resetChars();
   }
@@ -82,6 +85,13 @@ void checkLEDstate() {
     digitalWrite(redLED, LOW);
   }
 }
+
+void resetChars() {
+  for(int i=0; i<char_index;i++) {
+    comp_char_arr[i] = 0;
+  }
+  char_index = 0;
+}  
 
 //counts the number of characters in transmissionArray, plus commas and semicolons
 

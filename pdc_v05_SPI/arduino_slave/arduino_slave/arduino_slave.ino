@@ -31,6 +31,7 @@ int slot=0;
 String step_list[MAX_STEPS] = {"Define     Problem","Research","Brainstorm","Select",
               "Construct","Test","Communicate","Redesign","","","",""};
 int old_case; 
+boolean comp_sync;
 volatile boolean new_info;
 volatile boolean button_1pressed;
 volatile boolean button_2pressed;
@@ -100,6 +101,7 @@ void setup() {
   sending_times = false;
   display_sending = false;
   SPI_complete = false;
+  comp_sync = false;
   
   Serial.begin(9600); 
   GLCD.Init(); // start the GLCD code
@@ -119,14 +121,14 @@ void loop() {
   //------------------------ BEGIN DESIGN COMPASS CODE --------------------------------
 
 // if the teensy is busy sending times, display "sending times" for 3 seconds
-if(display_sending) {
-  GLCD.ClearScreen();
-  GLCD.CursorTo(2,2);
-  GLCD.print("Sending     Times");
-  delay(3000);
-  GLCD.ClearScreen();
-  display_sending = false;
-}
+  if(display_sending) {
+    GLCD.ClearScreen();
+    GLCD.CursorTo(2,2);
+    GLCD.print("Sending     Times");
+    delay(3000);
+    GLCD.ClearScreen();
+    display_sending = false;
+  }
 
 //if(new_info) {
 //  Serial.println("new info");
@@ -135,7 +137,7 @@ if(display_sending) {
   
 
 // if button 2 was pressed from the timer, display the menu and interpret results
-if (button_2pressed) { 
+  if (button_2pressed) { 
     button_1pressed = false;    // reset both buttons
     button_2pressed = false;
     
@@ -150,8 +152,9 @@ if (button_2pressed) {
         load_screen();
         break;
       case 1:
-        Serial.println("send times");
-        sending_times = true;
+        Serial.println("Computer sync menu");
+        runSyncScreen();
+//        sending_times = true;
         break;
       case 2:
         Serial.println("draw graph");
@@ -162,38 +165,92 @@ if (button_2pressed) {
       }
   } 
     
-    caseValue = caseSelect(sensorValue, NUM_STEPS);    // the current category gets whatever the dial is pointing to
-    String section = step_list[caseValue];
+  caseValue = caseSelect(sensorValue, NUM_STEPS);    // the current category gets whatever the dial is pointing to
+  String section = step_list[caseValue];
+  
+  //logic used to avoid having to clear the screen every iterartion.
+  //allows the arduino to remember what the last section it timed was. 
+  if (caseValue != old_case) {
+    GLCD.ClearScreen();
+    old_case=caseValue;
+  }
     
-    //logic used to avoid having to clear the screen every iterartion.
-    //allows the arduino to remember what the last section it timed was. 
-    if (caseValue != old_case) {
-      GLCD.ClearScreen();
-      old_case=caseValue;
-    }
-    
-    // this is the main interface, with the section and the current time for that section. 
-    GLCD.CursorTo(0,0);
-    GLCD.print(section);
-    GLCD.SelectFont(fixednums8x16);
-    GLCD.CursorTo(0,2);
-    int hrs=time_1.sectionTime[caseValue]/3600;
-    int mins=(time_1.sectionTime[caseValue]%3600)/60;
-    int secs=time_1.sectionTime[caseValue]%60;
-    GLCD.Printf(("%02d:%02d:%02d"), hrs, mins, secs);
-    GLCD.SelectFont(Arial_14);
-    
-    GLCD.GotoXY(0,50);
-    GLCD.print("Menu");
-    if(button_1pressed) {
-      GLCD.GotoXY(87,50);
-      GLCD.print("Pause");
-    } else {
-      GLCD.GotoXY(87,50);
-      GLCD.print("     Start     ");
-    }
-    logTime_1();   
+  // this is the main interface, with the section and the current time for that section. 
+  GLCD.CursorTo(0,0);
+  GLCD.print(section);
+  GLCD.SelectFont(fixednums8x16);
+  GLCD.CursorTo(0,2);
+  int hrs=time_1.sectionTime[caseValue]/3600;
+  int mins=(time_1.sectionTime[caseValue]%3600)/60;
+  int secs=time_1.sectionTime[caseValue]%60;
+  GLCD.Printf(("%02d:%02d:%02d"), hrs, mins, secs);
+  GLCD.SelectFont(Arial_14);
+  
+  GLCD.GotoXY(0,50);
+  GLCD.print("Menu");
+  if(button_1pressed) {
+    GLCD.GotoXY(87,50);
+    GLCD.print("Pause");
+  } else {
+    GLCD.GotoXY(87,50);
+    GLCD.print("     Start     ");
+  }
+  logTime_1();   
  
+}
+
+/******************************************************************************************************
+                                       Display Screen Functions
+*******************************************************************************************************/
+
+
+// This function is called either during setup or from the menu. It allows 
+// the user to choose a memory slot for the times to be stored in and 
+// gives the user a chance to clear any of the memory slots
+
+void load_screen()
+{
+  Serial.println("load screen called");
+  int sensor_val=0;
+  int old_cursor=0; 
+  boolean quit = false;
+    GLCD.GotoXY(85,50);
+    GLCD.print("Select");
+    GLCD.GotoXY(0,50);
+    GLCD.print("Clear");
+    while (!quit){
+	checkSPI();
+	slot=caseSelect(sensorValue,9);
+	if (slot!=old_cursor) //logic used to avoid having to clear the screen every iterartion.
+        //allows the arduino to remember what the last cursor number it timed was. 
+        {       
+           GLCD.ClearScreen();
+           old_cursor=slot;
+           GLCD.GotoXY(85,50);
+           GLCD.print("Select");
+           GLCD.GotoXY(0,50);
+           GLCD.print("Clear");
+        }
+        GLCD.CursorTo(0,0);
+        GLCD.print("Memory    Slot     "); GLCD.print(slot+1);
+        
+        //If they choose select, load the times already in that memory slot and end the function
+        if (button_1pressed) {
+          button_1pressed=false;
+          load_times(); 
+          break; 
+        }
+        
+        // If they choose clear, call the clear_slot function and continue with the loop
+        if (button_2pressed) {
+          button_2pressed=false;
+          clear_slot(); 
+          button_1pressed = false;
+          button_2pressed = false;
+          GLCD.ClearScreen();
+          old_cursor = -1;
+        } 
+     }  
 }
 
 // This function displays the menu that users can access by pressing button 2 from the timer.
@@ -203,7 +260,7 @@ if (button_2pressed) {
 
 int displayMenu()
 {
-  String menuList[] = {"Change    Memory    Slot","Send    Data","Display    Graph"};
+  String menuList[] = {"Change    Memory    Slot","Sync    PDC","Display    Graph"};
   boolean quit=false;
   int old_val = -1;
   
@@ -246,6 +303,46 @@ int displayMenu()
     }
   } 
 }
+
+// runSyncScreen displays "searching for docking station" until the DtD is found, and then
+// displays "synced with computer". at this point the teensy and arduino will handle information
+// input and output
+
+void runSyncScreen() {
+  boolean quit = false;
+  GLCD.ClearScreen();
+  GLCD.CursorTo(0,1);
+  GLCD.print("Searching     for");
+  GLCD.CursorTo(0,2);
+  GLCD.print("Docking    Station...");
+  
+  while(!comp_sync) {
+    checkSPI();
+    if(sensorValue == 30)
+      comp_sync = true;
+    if(sensorValue == 31) {
+      GLCD.ClearScreen();
+      GLCD.CursorTo(0,1);
+      GLCD.print("No DTD Found");
+      delay(1500);
+      return;
+    }
+  }
+  
+  GLCD.ClearScreen();
+  GLCD.CursorTo(0,1);
+  GLCD.print("In     Sync     Mode");
+  while(!quit) {
+    checkSPI();
+  }
+}
+
+
+
+/*********************************************************************************************************
+                                        Support Functions
+*********************************************************************************************************/
+
 
 // check whether the timer should be running or paused, based on the state of button 1
 // write the appropriate times to the sectionTime array
@@ -361,55 +458,6 @@ void get_heights(int heights[])
   for (int i=0; i<NUM_STEPS; i++){
     heights[i]=map(floor(time_1.sectionTime[i]), 0, total_time, 0, 40);
     }
-}
-
-// This function is called either during setup or from the menu. It allows 
-// the user to choose a memory slot for the times to be stored in and 
-// gives the user a chance to clear any of the memory slots
-
-void load_screen()
-{
-  Serial.println("load screen called");
-  int sensor_val=0;
-  int old_cursor=0; 
-  boolean quit = false;
-    GLCD.GotoXY(85,50);
-    GLCD.print("Select");
-    GLCD.GotoXY(0,50);
-    GLCD.print("Clear");
-    while (!quit){
-	checkSPI();
-	slot=caseSelect(sensorValue,9);
-	if (slot!=old_cursor) //logic used to avoid having to clear the screen every iterartion.
-        //allows the arduino to remember what the last cursor number it timed was. 
-        {       
-           GLCD.ClearScreen();
-           old_cursor=slot;
-           GLCD.GotoXY(85,50);
-           GLCD.print("Select");
-           GLCD.GotoXY(0,50);
-           GLCD.print("Clear");
-        }
-        GLCD.CursorTo(0,0);
-        GLCD.print("Memory    Slot     "); GLCD.print(slot+1);
-        
-        //If they choose select, load the times already in that memory slot and end the function
-        if (button_1pressed) {
-          button_1pressed=false;
-          load_times(); 
-          break; 
-        }
-        
-        // If they choose clear, call the clear_slot function and continue with the loop
-        if (button_2pressed) {
-          button_2pressed=false;
-          clear_slot(); 
-          button_1pressed = false;
-          button_2pressed = false;
-          GLCD.ClearScreen();
-          old_cursor = -1;
-        } 
-     }  
 }
   
 // Ask user to confirm, then  
