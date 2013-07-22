@@ -22,7 +22,7 @@ void initAudioPin();
 void resetStorage();
 void pinChange();
 int getTime();
-boolean checkTransmission();
+boolean checkComplete();
 void resetStorage();
 void resetChars();
 void parseArray(char char_arr[], int *char_index);

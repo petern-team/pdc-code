@@ -55,7 +55,7 @@ void setup() {
 
 void loop() {
   
-  comp_transmission = checkTransmission();
+  comp_transmission = checkComplete();
   checkLEDstate();
    
   // check for communication through the audio wire  
@@ -70,18 +70,22 @@ void loop() {
   }
   
   DTDreceive.checkIR(irrecv, results);
+  
   if(DTDreceive.transmission_complete) {
-    DTDreceive.printTransmission();
+    if(DTDreceive.PDC_sync) {
+      Serial.println("sending sync codes");
+      for(int i=0;i<5;i++) {
+        DTDsend.sendSyncCode(PRODUCT_ID);
+        delay(50);
+      }
+      DTDreceive.PDC_sync = false;
+    } else {
+      DTDreceive.printTransmission();
+    }
+    DTDreceive.resetVariables();
   }
   
-  if(DTDreceive.PDC_sync) {
-    Serial.println("sending sync codes");
-    for(int i=0;i<5;i++) {
-      DTDsend.sendSyncCode(PRODUCT_ID);
-      delay(50);
-    }
-    DTDreceive.PDC_sync = false;
-  }
+  
   
 //  if(digitalRead(BUTTONPIN))
 //    DTDreceive.resetVariables();

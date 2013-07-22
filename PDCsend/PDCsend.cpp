@@ -112,7 +112,7 @@ void PDCsend::sendArray() {
 }
 
 // sendCharArray is meant to pass along a character array sent from the computer to
-// the PC
+// the PDC
 
 void PDCsend::sendCharArray(char char_arr[], int length) {
     long code;
@@ -134,9 +134,10 @@ void PDCsend::sendSyncCode(long product_id) {
     
     for(int i=length-1;i>=0;i--) {
         irsend.sendSony(irKeyCodes[ID_components[i]], 32);
+        Serial.print(ID_components[i]);
         delay(50);
     }
-//    Serial.println();
+    Serial.println();
     irsend.sendSony(irKeyCodes[12], 32);
 }
 
@@ -183,9 +184,12 @@ void PDCsend::sendColumn(int index) {
 // findCheckSum checks the time_array to determine how many number will be sent, not
 // including the first triplet
 
+// this will have to be changed once the first number of each pair is included in
+// the array
 int PDCsend::findCheckSum(unsigned long time_array[]) {
     int checksum = 0;
     for(int i=0;i<number_of_times;i++) {
+        checksum++;
         checksum += checkIntLength(time_array[i]);
     }
     return checksum;

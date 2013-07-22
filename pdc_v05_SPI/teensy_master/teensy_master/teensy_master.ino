@@ -150,19 +150,20 @@ void runMenu()
 void runSyncScreen() {
   boolean quit = false;
   Serial.println("run sync screen");
-    pdcSend.sendSyncCode(PRODUCT_ID);
-  for(int i=0;(i<4 && !pdcReceive.PDC_sync);i++) {
+  pdcSend.sendSyncCode(PRODUCT_ID);
+  irrecv.enableIRIn();
+//  for(int i=0;(i<4 && !pdcReceive.PDC_sync);i++) {
     for(int j=0;(j<150 && !pdcReceive.PDC_sync);j++) {
       pdcReceive.checkIR(irrecv, results);
       delay(20);
     }
     
-  }
+//  }
   
   if(!pdcReceive.PDC_sync) {
     Serial.println("No DTD found");
     sendSPIdata(31);
-    return
+    return;
   } else {
     Serial.println("found it!");
     sendSPIdata(30);
@@ -172,6 +173,7 @@ void runSyncScreen() {
   while(!quit) {
     if(pdcReceive.transmission_complete) {
       parseTransmission();
+    }
   }
 
   Serial.println("leaving runsyncscreen");

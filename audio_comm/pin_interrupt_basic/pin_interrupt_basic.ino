@@ -16,7 +16,7 @@ void setup() {
   Serial.begin(9600);
   
   max_bi = 0;
-//  pinMode(8, INPUT);
+  pinMode(4, INPUT);
   num_zeros = 0;
   index = 0;
   the_byte = 0;
@@ -60,7 +60,7 @@ attachInterrupt(7,pinChange,CHANGE);
 
 void loop() {
 
-  if(digitalRead(10) && changes > 10 || changes > 3100) {
+  if(digitalRead(4) && changes > 10 || changes > 3100) {
     ref_index = index;
     index = 0;
     Serial.print(changes); Serial.print(", "); Serial.print(ref_index); Serial.print(": ");

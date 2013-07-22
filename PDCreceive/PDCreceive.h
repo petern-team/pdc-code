@@ -52,9 +52,11 @@ private:
     int index;
     //    decode_results results;         // IR data goes here
     
+    void checkTransmission();
     bool syncCodeRecvd();
     int convertCodeToKey(long);
     void storeData(int key);
+    long pow(int, int);
 };
 
 #endif
