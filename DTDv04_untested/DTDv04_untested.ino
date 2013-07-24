@@ -17,7 +17,6 @@ character number (sometimes) and all the number pairs.
 #include <PDCsend.h>
 //#include "../../../Tufts/CEEO/summer_13/pdc-code/PDCreceive/PDCreceive.h"
 
-const String transmission_sequence = "abcdefg";
 const long PRODUCT_ID = 38301; //"DTD01"
 const int redLED = 3;
 const int greenLED = 2;
@@ -69,6 +68,7 @@ void loop() {
     DTDsend.sendCharArray(comp_char_arr, char_index);      // TEST THIS
     resetStorage();
     resetChars();
+    irrecv.enableIRIn();
   }
   
   DTDreceive.checkIR(irrecv, results);
@@ -76,25 +76,19 @@ void loop() {
   if(DTDreceive.transmission_complete) {
     if(DTDreceive.PDC_sync) {
       delay(50);
-      Serial.println("sending sync codes");
-      for(int i=0;i<5;i++) {
+      Serial.println("syncing..");
+      for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
         DTDsend.sendSyncCode(PRODUCT_ID);
         delay(50);
       }
+      irrecv.enableIRIn();
       DTDreceive.PDC_sync = false;
     } else {
       DTDreceive.printTransmission();
     }
     DTDreceive.resetVariables();
   }
-  
-  
-  
-//  if(digitalRead(BUTTONPIN))
-//    DTDreceive.resetVariables();
 }
-
-
 
 
 void checkLEDstate() {

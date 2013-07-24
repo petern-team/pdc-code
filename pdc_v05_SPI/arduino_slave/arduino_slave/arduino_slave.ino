@@ -31,7 +31,7 @@ int slot=0;
 String step_list[MAX_STEPS] = {"Define     Problem","Research","Brainstorm","Select",
               "Construct","Test","Communicate","Redesign","","","",""};
 int old_case; 
-boolean comp_sync;
+//boolean comp_sync;
 volatile boolean new_info;
 volatile boolean button_1pressed;
 volatile boolean button_2pressed;
@@ -101,7 +101,7 @@ void setup() {
   sending_times = false;
   display_sending = false;
   SPI_complete = false;
-  comp_sync = false;
+//  comp_sync = false;
   
   Serial.begin(9600); 
   GLCD.Init(); // start the GLCD code
@@ -309,32 +309,52 @@ int displayMenu()
 // input and output
 
 void runSyncScreen() {
-  boolean quit = false;
+  unsigned long last_update = millis();
   GLCD.ClearScreen();
   GLCD.CursorTo(0,1);
   GLCD.print("Searching     for");
   GLCD.CursorTo(0,2);
   GLCD.print("Docking    Station...");
   
-  while(!comp_sync) {
+  while(1) {
     checkSPI();
-    if(sensorValue == 30)
-      comp_sync = true;
+    
+    if(sensorValue == 30) {
+      GLCD.ClearScreen();
+      GLCD.CursorTo(0,1);
+      GLCD.print("In     Sync     Mode");
+      sensorValue = 29;
+    }
     if(sensorValue == 31) {
       GLCD.ClearScreen();
       GLCD.CursorTo(0,1);
       GLCD.print("No    DTD    Found");
-      delay(1500);
+      delay(2000);
       return;
+    }
+    if(sensorValue == 32) {
+      GLCD.ClearScreen();
+      GLCD.CursorTo(0,1);
+      GLCD.print("Quitting    Sync    Mode");
+      delay(2000);
+      return;
+    }
+    if(sensorValue == 41) {
+      sending_times = true;
+      GLCD.ClearScreen();
+      GLCD.CursorTo(2,2);
+      GLCD.print("Sending     Times");
+      delay(3000);
+      sensorValue = 30;
     }
   }
   
-  GLCD.ClearScreen();
-  GLCD.CursorTo(0,1);
-  GLCD.print("In     Sync     Mode");
-  while(!quit) {
-    checkSPI();
-  }
+//  GLCD.ClearScreen();
+//  GLCD.CursorTo(0,1);
+//  GLCD.print("In     Sync     Mode");
+//  while(!quit) {
+//    checkSPI();
+//  }
 }
 
 

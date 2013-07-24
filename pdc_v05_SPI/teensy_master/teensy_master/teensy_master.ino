@@ -17,7 +17,7 @@ Design Compass screen and timer.
 
 // Write HIGH or LOW to this pin to signal to Arduino when SPI transfer is about to occur
 const int SSPIN = 0;
-const int RECEIVEPIN = 9;
+const int RECEIVEPIN = 8;
 const long PRODUCT_ID = 73201; //"=> PDC01"
 const int SEND_TIMES_ID = 001;
 boolean send_info;
@@ -28,6 +28,7 @@ button button_1(0);
 button button_2(1); 
 const int sensorPin = A0;
 unsigned long time_1sectionTime[15];
+unsigned int incoming_write[2][10];
 unsigned long test_arr[] = {1,2,3,4,5,6,7,8};
 
 // new instance of PDCsend class to send times using IR
@@ -50,14 +51,19 @@ void setup() {
   SPI.setClockDivider(SPI_CLOCK_DIV8);
   pinMode(SSPIN, OUTPUT);
   in_timer = true;
-  
-  irrecv.enableIRIn();
-  
   old_case = -1;
   send_info = false;
+  
+  irrecv.enableIRIn();
+  pinMode(sensorPin, INPUT);
+  
+  for(int i=0;i<10;i++) {
+    incoming_write[0][i] = 0;
+    incoming_write[1][i] = 0;
+  }
+  
   attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
   attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING);
-  pinMode(sensorPin, INPUT);
   
   // PDC on the arduino will start on the load screen, which allows the user to 
   // select or clear memory slots
@@ -118,6 +124,7 @@ void runMenu()
           Serial.println("computer sync menu");
           sendSPI();
           runSyncScreen();
+//          sendSPI();
 //          sendTimes();
 //          for(int i=0;i<8;i++) {
 //            Serial.print(time_1sectionTime[i]); Serial.print(", ");
@@ -133,11 +140,14 @@ void runMenu()
           while(!button_1.pressed) {
             // wait for them to quit the graph
           }
-          sendSPI();
-          button_1.pressed = false;
+//          sendSPI();
+//          button_1.pressed = false;
           break;
       }
       in_timer = true;
+      button_2.pressed = false;
+      button_1.pressed = false;
+      sendSPI();
       break;
     }
   }
@@ -168,14 +178,22 @@ void runSyncScreen() {
     Serial.println("found it!");
     sendSPIdata(30);
   }
+  pdcReceive.resetVariables();
   
   Serial.println("waiting for next transmission...");
   // goes here if sync was successful
   while(!quit) {
+    pdcReceive.checkIR(irrecv, results);
     if(pdcReceive.transmission_complete) {
-      pdcReceive.printTransmission();
+      pdcReceive.parseTransmission(incoming_write);
+      if(!interpretCommand(pdcReceive.transmission_id)) {
+        return;
+      }
+//      pdcReceive.printTransmission();
       pdcReceive.resetVariables();
-//      parseTransmission();
+//      irrecv.enableIRIn();
+      Serial.println("waiting for next transmission...");
+//      pdcReceive.parseTransmission();
     }
   }
 
@@ -239,12 +257,6 @@ void rise2_funct(){
   interrupts();
 }
 
-// parseTransmission takes a completed transmission character by character and parses it into 
-// useful information to tell the PDC what to do
-
-void parseTransmission() {
-  
-}
 
 // check the potentiometer position and map to a number between 0 and 24 so that it can
 // be sent as a byte
@@ -262,6 +274,37 @@ int caseSelect(int sensorValue, int upper)
   return(map(sensorValue, 0, 23, 0, upper-1)); 
 } 
 
+// interpretCommand returns true if the PDC should stay in sync mode and false if it should quit
+// otherwise the function handles all incoming commands from the DTD
+
+boolean interpretCommand(int incoming_id) {
+  short command_cat = incoming_id/100;
+  switch(command_cat) {
+    // case 1 is the category of query commands
+    case 1:
+      if(incoming_id == 101) {
+        sendSPIdata(41);
+//        sendSPI();
+          sendTimes();
+          for(int i=0;i<8;i++) {
+            Serial.print(time_1sectionTime[i]); Serial.print(", ");
+          }
+          Serial.println();
+      }
+      break;
+    // for now case 9 only contains the quit command
+    case 9:
+      if(incoming_id == 901) {
+        sendSPIdata(32);
+        return false;
+      }
+      break;
+  }
+  return true;  
+}
+
+//-----------------------------------------SPI COMMUNICATION-----------------------------------
+
 // SendSPI is called whenever the values for button 1 or 2 or the potentiometer have changed.
 // It sends the relevant values to Arduino and calls runMenu when appropriate
 
@@ -275,7 +318,7 @@ void sendSPI()
       SPI.transfer(output[i]);
       delay(1);
     }
-    Serial.println();
+    Serial.println();  
     
     digitalWrite(SSPIN, HIGH);
     send_info = false;
@@ -330,6 +373,7 @@ void sendTimes()
     pdcSend.createArray(PRODUCT_ID, SEND_TIMES_ID, time_1sectionTime);      // pdcSend will put all the times and categores in
     pdcSend.printTransmission();
     pdcSend.sendArray();                          // a 2D array and send it to the docking station
+    irrecv.enableIRIn();
     button_1.pressed = false;
     button_2.pressed = false;
     
