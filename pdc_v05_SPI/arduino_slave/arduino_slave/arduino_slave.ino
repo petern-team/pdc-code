@@ -36,6 +36,8 @@ volatile boolean new_info;
 volatile boolean button_1pressed;
 volatile boolean button_2pressed;
 volatile int sensorValue;
+volatile byte incoming_cat;
+volatile int incoming_time;
               
 //SPI library and variables ----------------------------------------------------------
 
@@ -43,10 +45,14 @@ volatile int sensorValue;
 
 int SPI_in[100];
 boolean sending_times;
+boolean loading_times;
 boolean display_sending;
 volatile byte pos;
 int send_pos;
+//volatile byte recv_h_pos;
+//volatile boolean recv_v_pos;
 volatile boolean SPI_complete;
+boolean load_times_complete;
 
 
 // SPI interrupt routine
@@ -67,6 +73,10 @@ ISR (SPI_STC_vect)
       sending_times = false;
       display_sending = true;
     }
+//  } else if(loading_times) {
+////    transmission will be category, most significant 8 bits of time, least significant 8
+//// bits of time, -1, times as many categories as there are (start as 8)
+    
   } else {
   
     // add to buffer if room
@@ -99,7 +109,9 @@ void setup() {
   pos=0;
   send_pos=0;
   sending_times = false;
-  display_sending = false;
+//  recv_h_pos = 0;
+//  recv_v_pos = 0;
+//  display_sending = false;
   SPI_complete = false;
 //  comp_sync = false;
   
@@ -121,14 +133,14 @@ void loop() {
   //------------------------ BEGIN DESIGN COMPASS CODE --------------------------------
 
 // if the teensy is busy sending times, display "sending times" for 3 seconds
-  if(display_sending) {
-    GLCD.ClearScreen();
-    GLCD.CursorTo(2,2);
-    GLCD.print("Sending     Times");
-    delay(3000);
-    GLCD.ClearScreen();
-    display_sending = false;
-  }
+//  if(display_sending) {
+//    GLCD.ClearScreen();
+//    GLCD.CursorTo(2,2);
+//    GLCD.print("Sending     Times");
+//    delay(3000);
+//    GLCD.ClearScreen();
+//    display_sending = false;
+//  }
 
 //if(new_info) {
 //  Serial.println("new info");
@@ -320,31 +332,33 @@ void runSyncScreen() {
     checkSPI();
     
     if(sensorValue == 30) {
-      GLCD.ClearScreen();
-      GLCD.CursorTo(0,1);
-      GLCD.print("In     Sync     Mode");
+      writeScreen("In     Sync     Mode");
       sensorValue = 29;
     }
     if(sensorValue == 31) {
-      GLCD.ClearScreen();
-      GLCD.CursorTo(0,1);
-      GLCD.print("No    DTD    Found");
+      writeScreen("No    DTD    Found");
       delay(2000);
       return;
     }
     if(sensorValue == 32) {
-      GLCD.ClearScreen();
-      GLCD.CursorTo(0,1);
-      GLCD.print("Quitting    Sync    Mode");
+      writeScreen("Quitting    Sync    Mode");
       delay(2000);
       return;
     }
     if(sensorValue == 41) {
       sending_times = true;
-      GLCD.ClearScreen();
-      GLCD.CursorTo(2,2);
-      GLCD.print("Sending     Times");
+      writeScreen("Sending     Times");
       delay(3000);
+      sensorValue = 30;
+    }
+    if(sensorValue == 51) {
+      writeScreen("Loading    Times");
+      loadSPItimes();
+      sensorValue = 30;
+    }
+    if(sensorValue == 91) {
+      writeScreen("Error    Please    Resend");
+      delay(2000);
       sensorValue = 30;
     }
   }
@@ -363,6 +377,19 @@ void runSyncScreen() {
                                         Support Functions
 *********************************************************************************************************/
 
+// writeScreen clears the screen and writes the given string to cursor loaction (0,1)
+void writeScreen(String incoming) {
+  GLCD.ClearScreen();
+  GLCD.CursorTo(0,1);
+  GLCD.print(incoming);
+}
+
+//loadSPItimes checks for time values coming in through SPI and saves them in the section time array
+void loadSPItimes() {
+  // use a different checkSPI function to continuously load times into the sectionTime array.
+  // when category 8 comes through, set load_complete to true which exits from the while loop
+  // and return from the function
+}
 
 // check whether the timer should be running or paused, based on the state of button 1
 // write the appropriate times to the sectionTime array

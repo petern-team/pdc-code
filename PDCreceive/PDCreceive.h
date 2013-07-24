@@ -35,7 +35,7 @@ public:
     void printTransmission();
     void resetVariables();
     char getChar(int index);
-    void parseTransmission();
+    bool parseTransmission(unsigned int write_array[][10]);
     
     static const int MAXPAIRS = 20;
     static const int RECEIVEPIN = 9;
@@ -43,6 +43,9 @@ public:
     bool PDC_in_transmission;
     bool transmission_complete;
     bool PDC_sync;
+    bool command_query;
+    bool command_write;
+    int transmission_id;
     
 private:
     static const int maxNumberOfCodes = 100;
@@ -53,6 +56,7 @@ private:
     int index;
     //    decode_results results;         // IR data goes here
     
+    int checkCharSum(int, bool*);
     void checkTransmission();
     bool syncCodeRecvd();
     int convertCodeToKey(long);

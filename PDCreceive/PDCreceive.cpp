@@ -12,6 +12,9 @@ PDCreceive::PDCreceive() {
     PDC_in_transmission = false;
     transmission_complete = false;
     PDC_sync = false;
+    command_query = false;
+    command_write = false;
+    transmission_id = 0;
 }
 
 PDCreceive::PDCreceive(long product) {
@@ -26,28 +29,16 @@ PDCreceive::PDCreceive(long product) {
     transmission_complete = false;
     PDC_sync = false;
     PRODUCT_ID = product;
+    command_query = false;
+    command_write = false;
+    transmission_id = 0;
 }
-
-//PDCreceive::PDCreceive(int receive_pin) {
-//    pinMode(receive_pin, INPUT);
-//    //  irrecv.enableIRIn();              // Start the IR receiver
-//    
-//    for(int i=0;i<2;i++) {
-//        for(int j=0;j<maxNumberOfCodes;j++) {
-//            transmissionArray[i][j]=0;
-//        }
-//    }
-//    h_index = 0;
-//    v_index = 0;
-//    val = 1;
-//    PDC_in_transmission = false;
-//}
 
 void PDCreceive::checkIR(IRrecv irrecv, decode_results results) {
     if (irrecv.decode(&results)) {
 //        Serial.println("got something");
         PDC_in_transmission = true;
-        Serial.println(results.value, HEX);
+//        Serial.println(results.value, HEX);
         // here if data is received
         irrecv.resume();
         
@@ -74,23 +65,6 @@ void PDCreceive::printTransmission() {
 //    }
 }
 
-//check if the transmission received is a valid product ID
-//bool PDCreceive::syncCodeRecvd() {
-//    String my_id = "";
-//    if(index > 7)
-//        return false;
-//    for(int i=0;i<index;i++) {
-//        my_id += transmissionArray[i];
-//        if(transmissionArray[i] == ',' || transmissionArray[i] == ';')
-//            return false;
-//    }
-////    if(my_id == String(PRODUCT_ID)+':') {
-////        Serial.print(my_id); Serial.print(": "); Serial.println(String(PRODUCT_ID)+':');
-////        return false;
-////    } else {
-//       return true;
-////    }
-//}
 
 // storeData replaced the translatedCode functions, it simply translates the index
 // of an IR code into a character and changes transmission_complete to true when it
@@ -101,46 +75,24 @@ void PDCreceive::storeData(int key) {
         transmissionArray[index] = '/';
     else
         transmissionArray[index] = keyIndex[key];
-    
+//    Serial.print(index); Serial.print(": "); Serial.println(transmissionArray[index]);
     if(key == 12) {
         transmission_complete = true;
+//        Serial.print("transmission[5]= "); Serial.println(transmissionArray[5]);
         checkTransmission();
         return;
     }
-//    if(key < 10) {
-//        transmissionArray[index] = '0'+key;
-//    } else {
-//        Serial.print("switchCase: "); Serial.println(key);
-//        switch (key) {
-//            case 10:
-//                transmissionArray[index] = ',';
-//                break;
-//            case 11:
-//                transmissionArray[index] = ';';
-//                break;
-//            case 12:
-//                transmissionArray[index] = ':';
-//                transmission_complete = true;
-////                printTransmission();
-//                
-//                return;
-//        }
-//    }
     index++;
 }
 
 // checkTransmission checks to make sure there's a legitimate header to the transmission
 // and that the checkSum works out
 
-// MAKE SURE THIS WORKS
 
 void PDCreceive::checkTransmission() {
-    int chk_indx;
+//    Serial.print("transmission[5]= "); Serial.println(transmissionArray[5]);
+//    int chk_indx;
     long incoming_id = 0;
-    int transmission_id = 0;
-    int checksum = 0;
-    int num_chars = 0;
-    int char_to_int;
     for(int i=0; i<5; i++) {
         incoming_id *= 10;
         incoming_id += transmissionArray[i]-'0';//(transmissionArray[i]-'0')*(pow(10, i));
@@ -152,35 +104,35 @@ void PDCreceive::checkTransmission() {
         return;
     }
     
-    if(transmissionArray[5] != ',') {
-//        Serial.println("Error: invalid product id");
-    }
-    
-    for(chk_indx=6;transmissionArray[chk_indx] != ',';chk_indx++) {
-        transmission_id *= 10;
-        transmission_id += transmissionArray[chk_indx]-'0';
-    }
-    Serial.println(transmission_id);
-
-    for(++chk_indx;transmissionArray[chk_indx] != ';';chk_indx++) {
-        checksum *= 10;
-        checksum += transmissionArray[chk_indx]-'0';//(transmissionArray[chk_indx]-'0')*(pow(10, chk_indx-initial));
-    }
-    Serial.print("check sum "); Serial.println(checksum);
-    
-    for(++chk_indx; transmissionArray[chk_indx] != ':'; chk_indx++) {
-        char_to_int = transmissionArray[chk_indx]-'0';
-        if(char_to_int == -1)
-            Serial.println("Error"); //: invalid IR code");
-        else if(char_to_int >= 0 && char_to_int < 10 )
-            num_chars++;
-            
-    }
-    Serial.print("num_chars: "); Serial.println(num_chars);
-//    if(num_chars != checksum)
-//        Serial.println("Error: wrong number of codes received");
-
-    
+//    if(transmissionArray[5] != ',') {
+////        Serial.println("Error: invalid product id");
+//    }
+//    
+//    for(chk_indx=6;transmissionArray[chk_indx] != ',';chk_indx++) {
+//        transmission_id *= 10;
+//        transmission_id += transmissionArray[chk_indx]-'0';
+//    }
+//    Serial.println(transmission_id);
+//
+//    for(++chk_indx;transmissionArray[chk_indx] != ';';chk_indx++) {
+//        checksum *= 10;
+//        checksum += transmissionArray[chk_indx]-'0';//(transmissionArray[chk_indx]-'0')*(pow(10, chk_indx-initial));
+//    }
+//    Serial.print("check sum "); Serial.println(checksum);
+//    
+//    for(++chk_indx; transmissionArray[chk_indx] != ':'; chk_indx++) {
+//        char_to_int = transmissionArray[chk_indx]-'0';
+//        if(char_to_int == -1)
+//            Serial.println("Error"); //: invalid IR code");
+//        else if(char_to_int >= 0 && char_to_int < 10 )
+//            num_chars++;
+//            
+//    }
+//    Serial.print("num_chars: "); Serial.println(num_chars);
+////    if(num_chars != checksum)
+////        Serial.println("Error: wrong number of codes received");
+//
+//    
 }
 
 // getChar
@@ -191,54 +143,96 @@ char PDCreceive::getChar(int index) {
 // parseTransmission takes a completed transmission character by character and
 // parses it into useful information to tell the PDC what to do
 
-void PDCreceive::parseTransmission() {
+bool PDCreceive::parseTransmission(unsigned int write_array[][10]) {
     int chk_indx;
     bool error_found = false;
     long incoming_id = 0;
-    int transmission_id = 0;
-    int checksum = 0;
-    int num_chars = 0;
-    short char_to_int;
+    int h_index = 0;
+    int v_index = 0;
 
-    // product id is always 5 numbers
-    for(int i=0; i<5; i++) {
-        incoming_id *= 10;
-        incoming_id += transmissionArray[i]-'0';//(transmissionArray[i]-'0')*(pow(10, i));
-    }
-    Serial.print("product id: "); Serial.println(incoming_id);
-    
-    if(transmissionArray[5] == ':') {
-        PDC_sync = true;
-        return;
-    } else if(transmissionArray[5] != ',') {
-        error_found = true;
-    }
+    //should have already been checked by checkTransmission();
+//    // product id is always 5 numbers
+//    for(int i=0; i<5; i++) {
+//        incoming_id *= 10;
+//        incoming_id += transmissionArray[i]-'0';//(transmissionArray[i]-'0')*(pow(10, i));
+//    }
+////    Serial.print("product id: "); Serial.println(incoming_id);
+//    
+//    if(transmissionArray[5] == ':') {
+//        PDC_sync = true;
+//        return true;
+//    } else if(transmissionArray[5] != ',') {
+//        error_found = true;
+//    }
     
     // transmission id is always 3 digits
     for(chk_indx=6;chk_indx<9;chk_indx++) {
         transmission_id *= 10;
         transmission_id += transmissionArray[chk_indx]-'0';
+//        Serial.print("transmission ID: "); Serial.println(transmission_id);
     }
-    Serial.println(transmission_id);
+//    Serial.print("transmission ID: "); Serial.println(transmission_id);
+    
+    if(transmissionArray[9] == ':') {
+        command_query = true;
+        return true;
+    } else if(transmissionArray[9] != ',') {
+        command_write = true;
+    }
+    
+    chk_indx = checkCharSum(chk_indx, &error_found);
+    
+    if(error_found) {
+        Serial.println("error found in parseTransmission");
+        return false;
+    }
+    
+    // if the transmission is good and the command is a write_command, store the
+    // remaining values into write_array
+    for(chk_indx; transmissionArray[chk_indx] != ':'; chk_indx++) {
+        if(transmissionArray[chk_indx] == ';') {
+            h_index++;
+            v_index = 0;
+        } else if(transmissionArray[chk_indx] == ',') {
+            v_index++;
+        } else {
+            write_array[v_index][h_index] = transmissionArray[chk_indx] - '0';
+//            Serial.print("write array "); Serial.print(h_index*10+v_index);
+//            Serial.print(": "); Serial.println(write_array[v_index][h_index]);
+        }
+    }
+    return true;
+}
+
+// check if the transmission array has all legitimate characters and if the checksum
+// is correct
+
+int PDCreceive::checkCharSum(int chk_indx, bool *error_found) {
+    int checksum = 0;
+    int num_chars = 0;
+    short char_to_int;
+    int data_index;
     
     for(++chk_indx;transmissionArray[chk_indx] != ';';chk_indx++) {
         checksum *= 10;
         checksum += transmissionArray[chk_indx]-'0';//(transmissionArray[chk_indx]-'0')*(pow(10, chk_indx-initial));
     }
-    Serial.print("check sum "); Serial.println(checksum);
+    //    Serial.print("check sum "); Serial.println(checksum);
+    data_index = chk_indx+1;
     
     for(++chk_indx; transmissionArray[chk_indx] != ':'; chk_indx++) {
         char_to_int = transmissionArray[chk_indx]-'0';
-        if(char_to_int == -1)
-            Serial.println("Error"); //: invalid IR code");
-        else if(char_to_int >= 0 && char_to_int < 10 )
+        if(char_to_int == -1) {
+            *error_found = true;
+            //            Serial.println("Error"); //: invalid IR code");
+        } else if(char_to_int >= 0 && char_to_int < 10 ) {
             num_chars++;
-        
+        }
     }
     Serial.print("num_chars: "); Serial.println(num_chars);
-    //    if(num_chars != checksum)
-    //        Serial.println("Error: wrong number of codes received");
-
+    if(num_chars != checksum)
+        *error_found = true;
+    return data_index;
 }
 
 
@@ -258,6 +252,10 @@ void PDCreceive::resetVariables() {
     index = 0;                  // this can cause problems sometimes !!!!!!
     PDC_in_transmission = false;
     transmission_complete = false;
+    PDC_sync = false;
+    command_query = false;
+    command_write = false;
+    transmission_id = 0;
 }
 
 long PDCreceive::pow(int base, int power) {

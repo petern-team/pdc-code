@@ -138,6 +138,7 @@ void PDCsend::sendSyncCode(long product_id) {
         delay(50);
     }
     Serial.println();
+    Serial.println(irKeyCodes[12], HEX);
     irsend.sendSony(irKeyCodes[12], 32);
 }
 
