@@ -35,6 +35,7 @@ public:
     void printTransmission();
     void resetVariables();
     char getChar(int index);
+    void parseTransmission();
     
     static const int MAXPAIRS = 20;
     static const int RECEIVEPIN = 9;

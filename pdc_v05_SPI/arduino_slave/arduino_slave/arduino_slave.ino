@@ -323,7 +323,7 @@ void runSyncScreen() {
     if(sensorValue == 31) {
       GLCD.ClearScreen();
       GLCD.CursorTo(0,1);
-      GLCD.print("No DTD Found");
+      GLCD.print("No    DTD    Found");
       delay(1500);
       return;
     }

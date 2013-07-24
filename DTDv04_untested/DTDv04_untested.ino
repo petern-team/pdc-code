@@ -47,8 +47,10 @@ void setup() {
   resetStorage();
   initAudioPin();  
   irrecv.enableIRIn();
+  Serial.println("exiting setup");
   
   // initialize sketch variables
+  char_index = 0;
 }
 
 
@@ -60,7 +62,7 @@ void loop() {
    
   // check for communication through the audio wire  
   if(comp_transmission) {
-    parseArray(comp_char_arr, &char_index);
+    char_index = parseArray(comp_char_arr);
     printArray(comp_char_arr, &char_index);
     
     // maybe should add a way to check if the PDC is syncing before sending info
@@ -73,6 +75,7 @@ void loop() {
   
   if(DTDreceive.transmission_complete) {
     if(DTDreceive.PDC_sync) {
+      delay(50);
       Serial.println("sending sync codes");
       for(int i=0;i<5;i++) {
         DTDsend.sendSyncCode(PRODUCT_ID);
@@ -117,7 +120,7 @@ void resetChars() {
 //{
 //  int num_chars=0;
 //  num_chars=num_cols*4;    // two numbers per column, one comma/semicolon/colon per number
-//  return num_chars;
+//  return num_chars;a=
 //}
 
 /*

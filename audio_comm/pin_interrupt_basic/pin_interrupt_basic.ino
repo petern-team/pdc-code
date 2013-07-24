@@ -2,7 +2,6 @@ int input;
 int timeOfLast;
 int pos;
 byte the_byte;
-byte max_bi;
 volatile byte num_zeros;
 const int ARR_SIZE = 400;
 volatile int changes;
@@ -15,8 +14,7 @@ volatile byte storage_arr[ARR_SIZE];
 void setup() {
   Serial.begin(9600);
   
-  max_bi = 0;
-  pinMode(4, INPUT);
+  pinMode(6, INPUT);
   num_zeros = 0;
   index = 0;
   the_byte = 0;
@@ -29,22 +27,23 @@ void setup() {
 
   cli();
   //set timer0 interrupt at 1.6kHz
-  TCCR0A = 0;// set entire TCCR0A register to 0
-  TCCR0B = 0;// same for TCCR0B
-  TCNT0  = 0;//initialize counter value to 0
+ TCCR1A = 0;// set entire TCCR0A register to 0
+  TCCR1B = 0;// same for TCCR0B
+  TCNT1  = 0;//initialize counter value to 0
   // set compare match register for 1600hz increments
-  OCR0A = 156;// = (16*10^6) / (1600*64) - 1 (must be <256)
+  OCR1A = 156;// = (16*10^6) / (1600*64) - 1 (must be <256)
   // turn on CTC mode
-  TCCR0A |= (1 << WGM01);
+  TCCR1B |= (1 << WGM12);
   // Set prescaler
   //  TCCR2B |= (1 << CS20);  // no prescaler
   //  TCCR2B |= (1 << CS21);  // 8 prescaler
-  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler
+//  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler
+  TCCR1B |= (1 << CS11) | (1 << CS10);
   //  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
   //  TCCR2B |= (1 << CS22) | (1 << CS20); // 1024 prescaler - not for timer2
   
   // enable timer compare interrupt
-  TIMSK0 |= (1 << OCIE0A);
+  TIMSK1 |= (1 << OCIE1A);
   
   
   // setup for the input capture interrupt
@@ -55,12 +54,13 @@ void setup() {
 
 sei();
 attachInterrupt(7,pinChange,CHANGE);
+Serial.println("exiting setup");
 
 }
 
 void loop() {
 
-  if(digitalRead(4) && changes > 10 || changes > 3100) {
+  if(digitalRead(6) && changes > 10 || changes > 3100) {
     ref_index = index;
     index = 0;
     Serial.print(changes); Serial.print(", "); Serial.print(ref_index); Serial.print(": ");
@@ -100,7 +100,7 @@ void loop() {
   
 }
 
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER1_COMPA_vect) {
 // if one of the last four pulses was true or current transmission is true 
 //  if(!(byte_index > 6 && storage_arr[index] == 0) || (PINB & B0000001)){  
   if((PIND & (1 << 2)) || num_zeros < 120) {
@@ -131,5 +131,5 @@ void pinChange() {
   byte_index &= B111; 
   if(!byte_index) index++;  //bit_index was just reset so increment the array index
    
-  TCNT0 = 0;
+  TCNT1 = 0;
 }

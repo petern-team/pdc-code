@@ -52,6 +52,7 @@ void loop()
    
   // check for communication through the audio wire  
   if(comp_transmission) {
+    Serial.println("doing things now");
     parseArray();
     printArray();
     resetStorage();

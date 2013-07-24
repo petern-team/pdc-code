@@ -25,7 +25,7 @@ int getTime();
 boolean checkComplete();
 void resetStorage();
 void resetChars();
-void parseArray(char char_arr[], int *char_index);
+int parseArray(char char_arr[]);//, int *char_index);
 void printArray(char char_arr[], int *char_index);
 void findBuffer(int*,byte*,byte);
 char getChar(int, byte);

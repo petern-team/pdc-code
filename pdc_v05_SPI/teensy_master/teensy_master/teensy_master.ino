@@ -169,10 +169,13 @@ void runSyncScreen() {
     sendSPIdata(30);
   }
   
+  Serial.println("waiting for next transmission...");
   // goes here if sync was successful
   while(!quit) {
     if(pdcReceive.transmission_complete) {
-      parseTransmission();
+      pdcReceive.printTransmission();
+      pdcReceive.resetVariables();
+//      parseTransmission();
     }
   }
 

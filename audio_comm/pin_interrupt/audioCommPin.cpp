@@ -231,7 +231,7 @@ boolean checkTransmission() {
     time_of_last = seconds;
   }
   last_state = changes;
-  if(/*(seconds - time_of_last > 1 ||*/ digitalRead(button_pin) && index > 0)
+  if(/*(seconds - time_of_last > 1 ||*/ digitalRead(button_pin) && index > 1)
     return true;
   else
     return false;

@@ -22,35 +22,36 @@ void initAudioPin() {
   
   cli();
   //set timer0 interrupt at 1.6kHz
-  TCCR0A = 0;// set entire TCCR0A register to 0
-  TCCR0B = 0;// same for TCCR0B
-  TCNT0  = 0;//initialize counter value to 0
+  TCCR1A = 0;// set entire TCCR0A register to 0
+  TCCR1B = 0;// same for TCCR0B
+  TCNT1  = 0;//initialize counter value to 0
   // set compare match register for 1600hz increments
-  OCR0A = 156;// = (16*10^6) / (1600*64) - 1 (must be <256)
+  OCR1A = 156;// = (16*10^6) / (1600*64) - 1 (must be <256)
   // turn on CTC mode
-  TCCR0A |= (1 << WGM01);
+  TCCR1B |= (1 << WGM12);
   // Set prescaler
   //  TCCR2B |= (1 << CS20);  // no prescaler
   //  TCCR2B |= (1 << CS21);  // 8 prescaler
-  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler
+//  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler
+  TCCR1B |= (1 << CS11) | (1 << CS10);
   //  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
   //  TCCR2B |= (1 << CS22) | (1 << CS20); // 1024 prescaler - not for timer2
   
   // enable timer compare interrupt
-  TIMSK0 |= (1 << OCIE0A);
+  TIMSK1 |= (1 << OCIE1A);
   
   
   // setup for the input capture interrupt
-  TCCR1A = _BV(WGM10) | _BV(WGM11);             // Timer 1 is Phase-correct 10-bit PWM.
-  TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS11); // div 8 clock prescaler to give .5us ticks on 16mhz clock
-  TCCR1B |= _BV(ICES1);                         // enable input capture
-  TIMSK1 =  _BV(ICIE1);                         // enable input capture interrupt for timer 1
+//  TCCR1A = _BV(WGM10) | _BV(WGM11);             // Timer 1 is Phase-correct 10-bit PWM.
+//  TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS11); // div 8 clock prescaler to give .5us ticks on 16mhz clock
+//  TCCR1B |= _BV(ICES1);                         // enable input capture
+//  TIMSK1 =  _BV(ICIE1);                         // enable input capture interrupt for timer 1
   
   sei();
   attachInterrupt(7,pinChange,CHANGE);
 }
 
-// ISR for changing value on pin 2, helps align timer0 for sampling
+// ISR for changing value on pin 7, helps align timer0 for sampling
 void pinChange() {
   buffer = ((buffer << 1) | ((PIND & (1<<2)) >> 2)) & FINDGROUP;
 //   if(PIND & B0000100)
@@ -70,10 +71,10 @@ void pinChange() {
     if(!bit_index) index++;  //bit_index was just reset so increment the array index
   }
    
-  TCNT0 = 0;
+  TCNT1 = 0;
 }
 
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER1_COMPA_vect) {
   overflow_1600++;
 // if one of the last four pulses was true or current transmission is true  
   if(PIND & (1<<2) || num_zeros < 75) {
@@ -96,9 +97,10 @@ ISR(TIMER0_COMPA_vect) {
   }
 }
 
-void parseArray(char char_arr[], int *char_index) {
+int parseArray(char char_arr[]) {
   char the_char = 0;
   int byte_index = 0;
+  int char_index = 0;
   byte search_bit_index = 0;
   
   while(byte_index <= index) {
@@ -107,18 +109,18 @@ void parseArray(char char_arr[], int *char_index) {
     if(byte_index == -1) {
 //      Serial.println();
 //      Serial.println("Error: no header found");
-      return;
+      return char_index;
     }
     the_char = getChar(byte_index, search_bit_index);
-    char_arr[*char_index] = the_char;
-    *char_index++;
+    char_arr[char_index] = the_char;
+    char_index++;
 //    Serial.print("ascii char: "); Serial.println(the_char+0);
     byte_index++;
     findBuffer(&byte_index, &search_bit_index, TAIL);
 //    Serial.println(search_index);
     if(byte_index == -1) {
 //      Serial.println("Error: no tail found");
-      return;
+      return char_index;
     }
     
     byte the_bit = 0;
@@ -128,15 +130,16 @@ void parseArray(char char_arr[], int *char_index) {
       if(!search_bit_index) byte_index++;  //was just reset so increment the array index
     } 
   }
+  return char_index;
 //  Serial.println();
 }
 
 void printArray(char char_arr[], int *char_index) {
-  Serial.print("index: "); Serial.println(index);
+//  Serial.print("char index: "); Serial.println(*char_index);
   for(int i=0;i<*char_index;i++) {
     Serial.print(char_arr[i]);
   }
-  Serial.println();
+//  Serial.println();
   
 //  for(int i=0;i<index;i++) {
 //      byte the_byte = storage_arr[i];
