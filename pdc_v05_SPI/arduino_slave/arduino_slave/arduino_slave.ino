@@ -352,8 +352,10 @@ void runSyncScreen() {
       sensorValue = 30;
     }
     if(sensorValue == 51) {
-      writeScreen("Loading    Times");
+      writeScreen("Loading    New    Times");
+      Serial.println("loading times");
       loadSPItimes();
+      delay(2000);
       sensorValue = 30;
     }
     if(sensorValue == 91) {
@@ -389,6 +391,26 @@ void loadSPItimes() {
   // use a different checkSPI function to continuously load times into the sectionTime array.
   // when category 8 comes through, set load_complete to true which exits from the while loop
   // and return from the function
+  boolean load_complete = false;
+  boolean new_times = false;
+  byte cat_time_pair[3];
+  byte the_cat;
+  int the_time;
+  
+  while(!load_complete) {
+    new_times = checkSPItimes(cat_time_pair);
+    if(new_times) {
+      the_cat = cat_time_pair[0];
+      Serial.print("new times, Category: "); Serial.println(the_cat);
+      the_time = (cat_time_pair[1] << 8) + cat_time_pair[2];
+      Serial.print("time: "); /* Serial.print(cat_time_pair[1] << 8); Serial.print(" + ");*/ Serial.println(the_time);
+      time_1.sectionTime[the_cat-1] = the_time;
+      if(the_cat == NUM_STEPS)
+        load_complete = true;
+      new_times = false;
+    }
+    
+  }
 }
 
 // check whether the timer should be running or paused, based on the state of button 1
@@ -570,6 +592,26 @@ void checkSPI()
     Serial.print("button 2: "); Serial.println(button_2pressed);
     Serial.print("sensor value: "); Serial.println(sensorValue);
   } 
+}
+
+// checkSPItimes is similar to checkSPI but is used to load a new array of times onto 
+// the current memory slot of the PDC. The function returns true when a set of three bytes
+// (category, time int part 1, time int part 2) has been received
+
+boolean checkSPItimes(byte cat_time_pair[]) {
+  if(SPI_complete) {
+    for(int i=0;i<3;i++) {
+      cat_time_pair[i] = SPI_in[i];
+//      Serial.print(cat_time_pair[i]); Serial.print(" ");
+    }
+//    Serial.println();
+    for(int i=pos; i>0; i--) {
+      SPI_in[--pos] = 0;
+    }
+    SPI_complete = false;
+    return true;
+  }
+  return false;
 }
   
 // maps the analog read output to a new number. Sensorvalue must originally be mapped

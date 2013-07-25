@@ -65,9 +65,14 @@ void loop() {
     printArray(comp_char_arr, &char_index);
     
     // maybe should add a way to check if the PDC is syncing before sending info
+    // eventually come up with a cleaner way to change LEDs
+    DTDreceive.PDC_in_transmission = true;
+    checkLEDstate();
+    
     DTDsend.sendCharArray(comp_char_arr, char_index);      // TEST THIS
     resetStorage();
     resetChars();
+    DTDreceive.PDC_in_transmission = false;
     irrecv.enableIRIn();
   }
   

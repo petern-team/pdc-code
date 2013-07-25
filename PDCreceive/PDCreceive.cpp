@@ -191,12 +191,15 @@ bool PDCreceive::parseTransmission(unsigned int write_array[][10]) {
     // remaining values into write_array
     for(chk_indx; transmissionArray[chk_indx] != ':'; chk_indx++) {
         if(transmissionArray[chk_indx] == ';') {
+            Serial.print("write array "); Serial.print(h_index*10+v_index);
+            Serial.print(": "); Serial.println(write_array[v_index][h_index]);
+
             h_index++;
             v_index = 0;
         } else if(transmissionArray[chk_indx] == ',') {
             v_index++;
         } else {
-            write_array[v_index][h_index] = transmissionArray[chk_indx] - '0';
+            write_array[v_index][h_index] = write_array[v_index][h_index]*10 + transmissionArray[chk_indx] - '0';
 //            Serial.print("write array "); Serial.print(h_index*10+v_index);
 //            Serial.print(": "); Serial.println(write_array[v_index][h_index]);
         }

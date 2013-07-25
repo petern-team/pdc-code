@@ -19,7 +19,7 @@ Design Compass screen and timer.
 const int SSPIN = 0;
 const int RECEIVEPIN = 8;
 const long PRODUCT_ID = 73201; //"=> PDC01"
-const int SEND_TIMES_ID = 001;
+const int SEND_TIMES_ID = 501;  // id used when sending times to the DTD
 const int NUM_CATS = 8;
 boolean send_info;
 boolean in_timer;
@@ -29,7 +29,6 @@ button button_1(0);
 button button_2(1); 
 const int sensorPin = A0;
 unsigned long time_1sectionTime[15];
-unsigned int incoming_write[2][10];
 unsigned long test_arr[] = {1,2,3,4,5,6,7,8};
 
 // new instance of PDCsend class to send times using IR
@@ -58,10 +57,10 @@ void setup() {
   irrecv.enableIRIn();
   pinMode(sensorPin, INPUT);
   
-  for(int i=0;i<10;i++) {
-    incoming_write[0][i] = 0;
-    incoming_write[1][i] = 0;
-  }
+//  for(int i=0;i<10;i++) {
+//    incoming_write[0][i] = 0;
+//    incoming_write[1][i] = 0;
+//  }
   
   attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
   attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING);
@@ -161,6 +160,12 @@ void runMenu()
 void runSyncScreen() {
   boolean quit = false;
   Serial.println("run sync screen");
+  unsigned int incoming_write[2][10];
+  for(int i=0;i<10;i++) {
+    incoming_write[0][i] = 0;
+    incoming_write[1][i] = 0;
+  }
+
   pdcSend.sendSyncCode(PRODUCT_ID);
   irrecv.enableIRIn();
 //  for(int i=0;(i<4 && !pdcReceive.PDC_sync);i++) {
@@ -188,8 +193,8 @@ void runSyncScreen() {
     if(pdcReceive.transmission_complete) {
       if(!pdcReceive.parseTransmission(incoming_write)) {
         sendSPIdata(91);
-      }
-      if(!interpretCommand(pdcReceive.transmission_id)) {
+        // if no error, call interpretCommand, if the function returns false exit sync mode
+      } else if(!interpretCommand(pdcReceive.transmission_id, incoming_write)) {
         pdcReceive.resetVariables();
         return;
       }
@@ -281,7 +286,7 @@ int caseSelect(int sensorValue, int upper)
 // interpretCommand returns true if the PDC should stay in sync mode and false if it should quit
 // otherwise the function handles all incoming commands from the DTD
 
-boolean interpretCommand(int incoming_id) {
+boolean interpretCommand(int incoming_id, unsigned int incoming_write[][10]) {
   short command_cat = incoming_id/100;
   switch(command_cat) {
     // case 1 is the category of query commands
@@ -301,7 +306,7 @@ boolean interpretCommand(int incoming_id) {
       if(incoming_id == 301) {
         Serial.println("301 received");
         sendSPIdata(51);
-        loadTimes();
+        loadTimes(incoming_write);
       }
       break;
     // for now case 9 only contains the quit command
@@ -318,20 +323,21 @@ boolean interpretCommand(int incoming_id) {
 // loadTimes will be called when the DTD is loading times externally onto the design compass
 // at first the times will go into the current memory slot, but this can be adjusted later
 
-void loadTimes() {
+void loadTimes(unsigned int incoming_write[][10]) {
+  Serial.println("loading times into SPI array");
   char SPI_times[3][NUM_CATS];
   byte the_byte;
   for(int i=0;i<NUM_CATS;i++) {
-    the_byte = incoming_write[0][i];
-    SPI_times[0][i] = the_byte;
-//    Serial.print(SPI_times[i*3]+0); Serial.print(" ");
+//    the_byte = 
+    SPI_times[0][i] = incoming_write[0][i];
+    Serial.print(SPI_times[0][i]+0); Serial.print(" ");
     the_byte = incoming_write[1][i] >> 8;      // first one of each pair will only be the 8 most significant
     SPI_times[1][i] = the_byte;
-//    Serial.print(SPI_times[(i*3)+1]+0); Serial.print(" ");
+    Serial.print(SPI_times[1][i]+0);Serial.print(" ");
     the_byte = incoming_write[1][i] & B11111111;
     SPI_times[2][i] = the_byte;
-//    Serial.print(SPI_times[(i*3)+2]+0); Serial.print(" ");
-//    Serial.println();
+    Serial.print(SPI_times[2][i]+0); Serial.print(" ");
+    Serial.println();
   }
   loadSPItimes(SPI_times);
 }
@@ -367,17 +373,18 @@ void sendSPI()
 }
 
 // loadSPItimes is used specifically to load times from the DTD onto the PDC
-void loadSPItimes(char SPI_times[][NUM_CATS]) {
+void loadSPItimes(char SPI_times[][8]) {
 //  char output[3*NUM_CATS];
 
   digitalWrite(SSPIN, LOW);
   for(int i=0;i<NUM_CATS;i++) {
     for(int j=0;j<3;j++) {
-      SPI.transfer(output[i]+0);
+//      Serial.print("sending: "); Serial.println(SPI_times[j][i]+0);
+      SPI.transfer(SPI_times[j][i]+0);
       delay(1);
     }
     SPI.transfer(-1);
-    delay(1);
+    delay(50);
   }
   digitalWrite(SSPIN, HIGH);
 }
