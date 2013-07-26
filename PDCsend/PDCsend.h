@@ -52,6 +52,7 @@ public:
     void sendArray();
     void sendCharArray(char char_arr[], int length);
     void sendSyncCode(long);
+    void sendConfirm(long, int);
     
     
     // debugging function used to print transmissionArray to serial on the PDC
@@ -75,6 +76,7 @@ private:
     
     void writeColumn(int index, long data);
     void sendColumn(int index);
+    void sendAndDelay(long code);
     
     // called by create array to find the checksum number
     int findCheckSum(unsigned long time_array[]);

@@ -61,7 +61,9 @@ void loop() {
    
   // check for communication through the audio wire  
   if(comp_transmission) {
+    Serial.println("sending a character array");
     char_index = parseArray(comp_char_arr);
+    Serial.print("char index = "); Serial.println(char_index);
     printArray(comp_char_arr, &char_index);
     
     // maybe should add a way to check if the PDC is syncing before sending info
@@ -84,7 +86,7 @@ void loop() {
       Serial.println("syncing..");
       for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
         DTDsend.sendSyncCode(PRODUCT_ID);
-        delay(50);
+        delay(25);
       }
       irrecv.enableIRIn();
       DTDreceive.PDC_sync = false;

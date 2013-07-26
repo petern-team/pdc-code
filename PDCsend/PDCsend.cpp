@@ -89,11 +89,9 @@ void PDCsend::sendArray() {
     for(int i=0; i<3; i++) {
         sendColumn(i);
         if(i == 2) {            // send a semicolon or a comma after each number
-            irsend.sendSony(irKeyCodes[11], 32);
-            delay(50);
+            sendAndDelay(irKeyCodes[11]);
         } else {
-            irsend.sendSony(irKeyCodes[10], 32);
-            delay(50);
+            sendAndDelay(irKeyCodes[10]);
         }
     }
     
@@ -102,11 +100,9 @@ void PDCsend::sendArray() {
     for (int i=0; i<number_of_times; i++) {
         column_index = (i*2)+3;
         sendColumn(column_index);
-        irsend.sendSony(irKeyCodes[10], 32);        // comma
-        delay(50);
+        sendAndDelay(irKeyCodes[10]);
         sendColumn(++column_index);
-        irsend.sendSony(irKeyCodes[11], 32);        // semicolon
-        delay(50);
+        sendAndDelay(irKeyCodes[11]);
     }
     irsend.sendSony(irKeyCodes[12], 32);            // colon means end of transmission
 }
@@ -119,8 +115,7 @@ void PDCsend::sendCharArray(char char_arr[], int length) {
     for(int i=0;i<length;i++) {
         code = convertCharToCode(char_arr[i]);
         Serial.println(code, HEX);
-        irsend.sendSony(code, 32);
-        delay(50);
+        sendAndDelay(code);
     }
 }
 
@@ -129,17 +124,37 @@ void PDCsend::sendCharArray(char char_arr[], int length) {
 
 void PDCsend::sendSyncCode(long product_id) {
     int ID_components[NUM_COMPS] = {0,0,0,0,0};
-    int length = checkIntLength(product_id);
     breakItDown(product_id, ID_components);
     
-    for(int i=length-1;i>=0;i--) {
-        irsend.sendSony(irKeyCodes[ID_components[i]], 32);
-        Serial.print(ID_components[i]);
-        delay(50);
+    for(int i=4;i>=0;i--) {
+        sendAndDelay(irKeyCodes[ID_components[i]]);
+//        Serial.print(ID_components[i]);
     }
     Serial.println();
     Serial.println(irKeyCodes[12], HEX);
     irsend.sendSony(irKeyCodes[12], 32);
+}
+
+// sendConfirm transforms a transmission id into a confirmation code and sends it to
+// the DTD
+
+void PDCsend::sendConfirm(long product_id, int trans_id) {
+    int product_id_arr[NUM_COMPS];
+    int trans_id_arr[3];
+    trans_id = trans_id%100 + 700;
+    
+    breakItDown(product_id, product_id_arr);
+    for(int i=4;i>=0;i--) {
+        sendAndDelay(irKeyCodes[product_id_arr[i]]);   
+    }
+    sendAndDelay(irKeyCodes[10]);
+    
+    breakItDown(trans_id, trans_id_arr);
+    for(int i=2;i>=0;i--) {
+        sendAndDelay(irKeyCodes[trans_id_arr[i]]);
+    }
+    sendAndDelay(irKeyCodes[12]);
+    
 }
 
 
@@ -176,9 +191,14 @@ void PDCsend::sendColumn(int index) {
 //    Serial.print("send length: "); Serial.println(length);
     for(int i=length;i>=1;i--) {
 //        Serial.println(transmissionArray[j][index], HEX);
-        irsend.sendSony(transmissionArray[i][index], 32);
-        delay(50);
+        sendAndDelay(transmissionArray[i][index]);
     }
+}
+
+// finally replace all those annoying irsend lines
+void PDCsend::sendAndDelay(long code) {
+    irsend.sendSony(code, 32);
+    delay(35);
 }
 
 
@@ -199,10 +219,12 @@ int PDCsend::findCheckSum(unsigned long time_array[]) {
 //breakItDown: assign each digit of a number to a spot in the time_components array
 // thousands goes in time_components[3], hundreds goes in time_components[2], etc.
 
-void PDCsend::breakItDown(long seconds, int time_components[NUM_COMPS]) {
+void PDCsend::breakItDown(long data, int data_components[NUM_COMPS]) {
     for(int i=0;i<NUM_COMPS;i++) {
-        time_components[i] = ((seconds%(pow(10,i+1)))/pow(10,i));
+        data_components[i] = ((data%(pow(10,i+1)))/pow(10,i));
+//        Serial.print(data_components[i]);
     }
+//    Serial.println();
 }
 
 // returns the number of digits in the time value as determined by time_components
@@ -255,4 +277,3 @@ long PDCsend::pow(int base, int power) {
     }
     return ans;
 }
-

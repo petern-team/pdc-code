@@ -171,7 +171,7 @@ bool PDCreceive::parseTransmission(unsigned int write_array[][10]) {
         transmission_id += transmissionArray[chk_indx]-'0';
 //        Serial.print("transmission ID: "); Serial.println(transmission_id);
     }
-//    Serial.print("transmission ID: "); Serial.println(transmission_id);
+    Serial.print("transmission ID: "); Serial.println(transmission_id);
     
     if(transmissionArray[9] == ':') {
         command_query = true;
@@ -191,8 +191,8 @@ bool PDCreceive::parseTransmission(unsigned int write_array[][10]) {
     // remaining values into write_array
     for(chk_indx; transmissionArray[chk_indx] != ':'; chk_indx++) {
         if(transmissionArray[chk_indx] == ';') {
-            Serial.print("write array "); Serial.print(h_index*10+v_index);
-            Serial.print(": "); Serial.println(write_array[v_index][h_index]);
+//            Serial.print("write array "); Serial.print(h_index*10+v_index);
+//            Serial.print(": "); Serial.println(write_array[v_index][h_index]);
 
             h_index++;
             v_index = 0;

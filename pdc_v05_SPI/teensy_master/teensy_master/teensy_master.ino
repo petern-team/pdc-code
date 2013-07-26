@@ -9,7 +9,8 @@ Design Compass screen and timer.
 
 #include <SPI.h>
 #include "button.h"
-//#include "PDCsend_v02.h"
+#include <EEPROM.h>
+
 #include <IRremote.h>
 #include <PDCsend.h>
 #include <PDCreceive.h>
@@ -18,9 +19,10 @@ Design Compass screen and timer.
 // Write HIGH or LOW to this pin to signal to Arduino when SPI transfer is about to occur
 const int SSPIN = 0;
 const int RECEIVEPIN = 8;
-const long PRODUCT_ID = 73201; //"=> PDC01"
 const int SEND_TIMES_ID = 501;  // id used when sending times to the DTD
 const int NUM_CATS = 8;
+
+unsigned int PRODUCT_ID = 63201; //"=> PDC01", not a constant but gets loaded every time from eeprom
 boolean send_info;
 boolean in_timer;
 int old_case;
@@ -57,16 +59,12 @@ void setup() {
   irrecv.enableIRIn();
   pinMode(sensorPin, INPUT);
   
-//  for(int i=0;i<10;i++) {
-//    incoming_write[0][i] = 0;
-//    incoming_write[1][i] = 0;
-//  }
-  
   attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
   attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING);
   
   // PDC on the arduino will start on the load screen, which allows the user to 
   // select or clear memory slots
+  loadOldId();
   runLoadScreen();
 }
 
@@ -246,6 +244,17 @@ void runLoadScreen()
 }
 
 //-------------------------------------- UTILITIES ---------------------------------
+// loadOldId loads the product id stored in eeprom. if no id exists, this function automatically assigns
+// the pdc id 63200
+void loadOldId() {
+  PRODUCT_ID = word(EEPROM.read(0), EEPROM.read(1));
+  Serial.print("found product id: "); Serial.println(PRODUCT_ID);
+    if(PRODUCT_ID/63200 != 1) {
+    Serial.println("no product id stored: using id 63200");
+    PRODUCT_ID = 63200;
+  }
+}
+
 
 //the interrupt service routine. Calls the rise function in the button1 class and tells
 // the teensy to send new values next time through loop
@@ -307,6 +316,14 @@ boolean interpretCommand(int incoming_id, unsigned int incoming_write[][10]) {
         Serial.println("301 received");
         sendSPIdata(51);
         loadTimes(incoming_write);
+        
+        // this will be handled by the computer
+        pdcSend.sendConfirm(PRODUCT_ID, incoming_id);
+      } else if(incoming_id == 302) {
+        Serial.println("loading new id");
+        sendSPIdata(52);
+        loadProductId(incoming_write);
+        pdcSend.sendConfirm(PRODUCT_ID, incoming_id);
       }
       break;
     // for now case 9 only contains the quit command
@@ -340,6 +357,14 @@ void loadTimes(unsigned int incoming_write[][10]) {
     Serial.println();
   }
   loadSPItimes(SPI_times);
+}
+
+// loadProductId used to load a new product ID sent from the DTD
+void loadProductId(unsigned int incoming_write[][10]) {
+  unsigned int new_id = incoming_write[0][0];
+  Serial.print("saving id "); Serial.println(new_id);
+  EEPROM.write(0, highByte(new_id));
+  EEPROM.write(1, lowByte(new_id));
 }
 
 //-----------------------------------------SPI COMMUNICATION-----------------------------------
