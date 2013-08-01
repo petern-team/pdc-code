@@ -1,4 +1,4 @@
-E/*
+/*
 Teensy-Arduino SPI communication, prototype v01
 
 arduino slave code

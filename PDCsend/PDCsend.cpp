@@ -23,8 +23,8 @@ PDCsend::PDCsend() {
 }
 
 // initialize transmissionArray to all zeros and set the specified pin number as an input pin
-PDCsend::PDCsend(int inPin) {
-    pinMode(inPin, INPUT);
+PDCsend::PDCsend(unsigned int product_id) {
+    my_id = product_id;
     number_of_times = 8;              // always intializes to 8 in version 1
     for(int i=0;i<7;i++) {      // initialize transmissionArray to all zeros
         for(int j=0;j<MAXPAIRS;j++) {
@@ -39,7 +39,7 @@ PDCsend::PDCsend(int inPin) {
 void PDCsend::printTransmission() {
     long the_code;
     for(int i=0;i<6;i++) {
-        for(int j=0;j<number_of_times*2+3;j++) {
+        for(int j=0;j<num_pairs*2+3;j++) {
             the_code = transmissionArray[i][j];
             if(the_code < 9) {
                 Serial.print(the_code, HEX);
@@ -58,22 +58,55 @@ void PDCsend::printTransmission() {
 // columns 3-7 contain the digits that make up the time value. (ones go in column 3, tens go in
 // column 4, etc.)
 
-void PDCsend::createArray(long product_id, int trans_id, unsigned long time_array[]) {
+void PDCsend::createArray(int trans_id, unsigned int time_array[]) {
     Serial.println("create array called");
+    num_pairs = 8;
     int column_index;
     
     // first write the triplet of product id, transmission id, checksum
-    Serial.print("calling writecolumn with product_id: "); Serial.println(product_id);
-    writeColumn(0, product_id);
+    Serial.print("calling writecolumn with product_id: "); Serial.println(my_id);
+    writeColumn(0, my_id);
     writeColumn(1, trans_id);
-    writeColumn(2, findCheckSum(time_array));
+    writeColumn(2, findCheckSum(time_array, 8)+8);
     
     // this is the main loop for writing times into the array
-    for (int i=0; i<number_of_times; i++) {
+    for (int i=0; i<num_pairs; i++) {
+        Serial.print("storing time: "); Serial.println(time_array[i]);
         //        int theTime = time_array[i];
         column_index = (i*2)+3;
         writeColumn(column_index, i+1);      // first of the pair will be the category number
         writeColumn(++column_index, time_array[i]);
+        
+    }
+//    num_pairs = number_of_times;
+}
+
+// createDataArray works the same way but also takes in an array of time stamps and
+// the length of the array
+
+// TEST THIS FUNCTION
+
+void PDCsend::createDataArray(int trans_id, unsigned int data_array[], unsigned int time_stamps[], int length){
+    
+    Serial.print("create array called, length: "); Serial.println(length);
+    int column_index;
+    int checksum;
+    num_pairs = length;
+    
+    // first write the triplet of product id, transmission id, checksum
+    Serial.print("calling writecolumn with product_id: "); Serial.println(my_id);
+    writeColumn(0, my_id);
+    writeColumn(1, trans_id);
+    checksum = findCheckSum(data_array, length)+findCheckSum(time_stamps, length);
+    Serial.print("checksum is "); Serial.println(checksum);
+    writeColumn(2, checksum);
+    
+    // this is the main loop for writing times into the array
+    for (int i=0; i<num_pairs; i++) {
+        //        int theTime = time_array[i];
+        column_index = (i*2)+3;
+        writeColumn(column_index, time_stamps[i]);      // first of the pair will be the category number
+        writeColumn(++column_index, data_array[i]);
         
     }
 }
@@ -97,7 +130,7 @@ void PDCsend::sendArray() {
     
     // these nested for loops send the categories and times from the rest of transmissionArray
     
-    for (int i=0; i<number_of_times; i++) {
+    for (int i=0; i<num_pairs; i++) {
         column_index = (i*2)+3;
         sendColumn(column_index);
         sendAndDelay(irKeyCodes[10]);
@@ -161,22 +194,23 @@ void PDCsend::sendConfirm(long product_id, int trans_id) {
 // writeColumn takes a column index and an integer and writes each digit of the integer
 // into a different row of te column
 
-void PDCsend::writeColumn(int index, long data) {
-    Serial.print("index "); Serial.print(index); Serial.print(": ");
-    Serial.print(data); Serial.print(", ");
+void PDCsend::writeColumn(int index, int data) {
+//    Serial.print("index "); Serial.print(index); Serial.print(": ");
+//    Serial.print(data); Serial.print(", ");
     int time_components[NUM_COMPS];
     int length;
     breakItDown(data, time_components);
     length = checkLength(time_components);
     transmissionArray[0][index] = length;
 //    long reconstruct = 0;
-    
+//    Serial.print("length: "); Serial.println(transmissionArray[0][index]);
     
     for(int i=1;i<=length;i++) {
-        transmissionArray[i][index]=irKeyCodes[time_components[i-1]];
+        transmissionArray[i][index]=time_components[i-1];
 //        Serial.print("index"); Serial.print(index); Serial.print(": ");
-//        Serial.println(transmissionArray[i][index], HEX);
+//        Serial.println(transmissionArray[i][index]);
     }
+    
 //    for(int i=0;i<length;i++) {
 //        reconstruct += convertCodeToKey(transmissionArray[i][index]) * pow(10, i);
 //    }
@@ -190,8 +224,8 @@ void PDCsend::sendColumn(int index) {
     int length = transmissionArray[0][index];
 //    Serial.print("send length: "); Serial.println(length);
     for(int i=length;i>=1;i--) {
-//        Serial.println(transmissionArray[j][index], HEX);
-        sendAndDelay(transmissionArray[i][index]);
+//        Serial.println(transmissionArray[i][index], HEX);
+        sendAndDelay(irKeyCodes[transmissionArray[i][index]]);
     }
 }
 
@@ -207,12 +241,13 @@ void PDCsend::sendAndDelay(long code) {
 
 // this will have to be changed once the first number of each pair is included in
 // the array
-int PDCsend::findCheckSum(unsigned long time_array[]) {
+int PDCsend::findCheckSum(unsigned int data_array[], int length) {
     int checksum = 0;
-    for(int i=0;i<number_of_times;i++) {
-        checksum++;
-        checksum += checkIntLength(time_array[i]);
+    for(int i=0;i<length;i++) {
+//        checksum++;
+        checksum += checkIntLength(data_array[i]);
     }
+    Serial.print("checksum: "); Serial.println(checksum);
     return checksum;
 }
 

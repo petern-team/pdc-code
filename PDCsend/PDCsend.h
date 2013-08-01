@@ -37,15 +37,16 @@ const char keyIndex[13] = {'0','1','2','3','4','5','6','7','8','9',',',';',':'};
 class PDCsend {
 public:
     PDCsend();
-    PDCsend(int inPin);
+    PDCsend(unsigned int);
     
     static const int MAXPAIRS = 20;
     
     // all createArray functions take in a list of times and put them in a 2D array to be sent
     // to the docking station
-    void createArray(long product_id, int trans_id, unsigned long time_array[]);
-    void createArray(long product_id, int trans_id, char info_array[]);
-    void createArray(unsigned long time_array[],unsigned int cat_array[]);
+    void createArray(int trans_id, unsigned int time_array[]);
+//    void createArray(int trans_id, char info_array[]);
+//    void createArray(unsigned long time_array[],unsigned int cat_array[]);
+    void createDataArray(int trans_id, unsigned int data[], unsigned int time_stamps[], int length);
 //    void createArray(long cat_time_array[][MAXPAIRS]);
     
     // send all of the times to the docking station using IR codes
@@ -58,12 +59,17 @@ public:
     // debugging function used to print transmissionArray to serial on the PDC
     void printTransmission();
     int test_init;
+    unsigned int my_id;
     
     
 private:
     static const int NUM_COMPS = 5;    // maximum number of single-digit time components (1-99999)
     
-    long transmissionArray[6][MAXPAIRS*2+3]; //start with a maximum size of 5 digits per number
+    int transmissionArray[6][MAXPAIRS*2+3]; //start with a maximum size of 5 digits per number
+    int num_pairs;
+    // the number of category-time pairs that can be expected in a transmission
+    int number_of_times;              // always intializes to 8 in version 1
+    IRsend irsend;
     // adjust MAXPAIRS to account for header and storing by column
     // the first row will consist of the length of each column
     
@@ -74,12 +80,12 @@ private:
     int checkLength(int[]);
     int checkIntLength(long);
     
-    void writeColumn(int index, long data);
+    void writeColumn(int index, int data);
     void sendColumn(int index);
     void sendAndDelay(long code);
     
     // called by create array to find the checksum number
-    int findCheckSum(unsigned long time_array[]);
+    int findCheckSum(unsigned int data_array[], int length);
     
     // breakItDown edits the time_components array to contain the digits that make up the time value,
     // in the order [ones, tens, hundreds, thousands, ten-thousands]
@@ -90,9 +96,7 @@ private:
     long convertCharToCode(char);
     long pow(int, int);
     
-    // the number of category-time pairs that can be expected in a transmission
-    int number_of_times;              // always intializes to 8 in version 1
-    IRsend irsend;
+
     
     
 };

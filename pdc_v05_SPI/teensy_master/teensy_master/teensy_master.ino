@@ -30,7 +30,7 @@ int timeOfLast;
 button button_1(0);
 button button_2(1); 
 const int sensorPin = A0;
-unsigned long time_1sectionTime[15];
+unsigned int time_1sectionTime[15];
 unsigned long test_arr[] = {1,2,3,4,5,6,7,8};
 
 // new instance of PDCsend class to send times using IR
@@ -65,7 +65,11 @@ void setup() {
   // PDC on the arduino will start on the load screen, which allows the user to 
   // select or clear memory slots
   loadOldId();
+  pdcSend.my_id = PRODUCT_ID;
   runLoadScreen();
+//  pdcSend.createArray(SEND_TIMES_ID, time_1sectionTime);      // pdcSend will put all the times and categores in
+//    pdcSend.printTransmission();
+//    pdcSend.sendArray();                          // a 2D array and send it to the docking station
 }
 
 void loop() 
@@ -451,7 +455,7 @@ void sendTimes()
     digitalWrite(SSPIN, HIGH);
     
     Serial.println("about to call createArray");
-    pdcSend.createArray(PRODUCT_ID, SEND_TIMES_ID, time_1sectionTime);      // pdcSend will put all the times and categores in
+    pdcSend.createArray(SEND_TIMES_ID, time_1sectionTime);      // pdcSend will put all the times and categores in
     pdcSend.printTransmission();
     pdcSend.sendArray();                          // a 2D array and send it to the docking station
     irrecv.enableIRIn();

@@ -15,9 +15,10 @@ character number (sometimes) and all the number pairs.
 #include "audioCommPin.h"
 #include <PDCreceive.h>
 #include <PDCsend.h>
+//#include <MemoryFree.h>
 //#include "../../../Tufts/CEEO/summer_13/pdc-code/PDCreceive/PDCreceive.h"
 
-const long PRODUCT_ID = 38301; //"DTD01"
+const unsigned int PRODUCT_ID = 38301; //"DTD01"
 const int redLED = 3;
 const int greenLED = 2;
 
@@ -25,7 +26,7 @@ char comp_char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage
 int char_index;
 
 PDCreceive DTDreceive(PRODUCT_ID);
-PDCsend DTDsend;
+PDCsend DTDsend(38301);
 IRrecv irrecv(8);    // create the IR library
 decode_results results;
 
@@ -50,6 +51,8 @@ void setup() {
   
   // initialize sketch variables
   char_index = 0;
+//  Serial.print("free memory: ");
+//  Serial.println(freeMemory());
 }
 
 
@@ -61,7 +64,6 @@ void loop() {
    
   // check for communication through the audio wire  
   if(comp_transmission) {
-    Serial.println("sending a character array");
     char_index = parseArray(comp_char_arr);
     Serial.print("char index = "); Serial.println(char_index);
     printArray(comp_char_arr, &char_index);
