@@ -41,9 +41,10 @@ const long irKeyCodes [14] = {
     0x18E738C7,    // (colon) - 12
     0x18E7C8E7};
 
+
 int value;
 int timeOfLast = 0;
-long transmissionArray[maxNumberOfCodes];
+char transmissionArray[maxNumberOfCodes];
 int index = 0;
 long key;
 
@@ -67,9 +68,9 @@ void loop() {
  if (millis() - timeOfLast > 1000) {        //if its been 2 seconds since the last received data
    for (int i=0; i<index; i++) {        // print all the codes in transmission array and clear the array
 //     Serial.print(i+1);   
-     Serial.print(transmissionArray[i], HEX);
-     Serial.print(": ");
-     Serial.println(convertCodeToKey(transmissionArray[i]));
+     Serial.println(transmissionArray[i]);
+//     Serial.print(": ");
+//     Serial.println(convertCodeToKey(transmissionArray[i]));
      transmissionArray[i] = 0;
    }  
    index = 0;
@@ -81,6 +82,7 @@ void loop() {
     irrecv.resume();
 //    showReceivedData();
     key = results.value;
+//    Serial.println(key);
     storeCodes(key);
   } 
 }

@@ -168,6 +168,7 @@ void printArray(char char_arr[], int *char_index) {
 //      Serial.print(storage_arr[i], BIN); Serial.print(" ");
 //    }
 //    Serial.println();
+Serial.println();
 }
 
 void findBuffer(int *start_byte, byte *start_bit, byte search) {
