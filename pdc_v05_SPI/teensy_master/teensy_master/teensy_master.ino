@@ -322,12 +322,12 @@ boolean interpretCommand(int incoming_id, unsigned int incoming_write[][10]) {
         loadTimes(incoming_write);
         
         // this will be handled by the computer
-        pdcSend.sendConfirm(PRODUCT_ID, incoming_id);
+        pdcSend.sendConfirm(incoming_id);
       } else if(incoming_id == 302) {
         Serial.println("loading new id");
         sendSPIdata(52);
         loadProductId(incoming_write);
-        pdcSend.sendConfirm(PRODUCT_ID, incoming_id);
+        pdcSend.sendConfirm(incoming_id);
       }
       break;
     // for now case 9 only contains the quit command

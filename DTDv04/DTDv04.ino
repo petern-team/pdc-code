@@ -15,7 +15,7 @@ character number (sometimes) and all the number pairs.
 #include "audioCommPin.h"
 #include <PDCreceive.h>
 #include <PDCsend.h>
-//#include <MemoryFree.h>
+#include <MemoryFree.h>
 //#include "../../../Tufts/CEEO/summer_13/pdc-code/PDCreceive/PDCreceive.h"
 
 const unsigned int PRODUCT_ID = 38301; //"DTD01"
@@ -51,8 +51,8 @@ void setup() {
   
   // initialize sketch variables
   char_index = 0;
-//  Serial.print("free memory: ");
-//  Serial.println(freeMemory());
+  Serial.print("free memory: ");
+  Serial.println(freeMemory());
 }
 
 
@@ -86,10 +86,10 @@ void loop() {
     if(DTDreceive.PDC_sync) {
       delay(50);
       Serial.println("syncing..");
-      for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
+//      for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
         DTDsend.sendSyncCode(PRODUCT_ID);
-        delay(25);
-      }
+//        delay(25);
+//      }
       irrecv.enableIRIn();
       DTDreceive.PDC_sync = false;
     } else {

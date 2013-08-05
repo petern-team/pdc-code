@@ -5,33 +5,16 @@ PDCreceive::PDCreceive() {
     pinMode(RECEIVEPIN, INPUT);
     //  irrecv.enableIRIn();              // Start the IR receiver
     
-    for(int i=0;i<100;i++) {
-        transmissionArray[i]='-';
-    }
-    index = 0;
-    PDC_in_transmission = false;
-    transmission_complete = false;
-    PDC_sync = false;
-    command_query = false;
-    command_write = false;
-    transmission_id = 0;
+    resetVariables();
 }
 
 PDCreceive::PDCreceive(long product) {
     pinMode(RECEIVEPIN, INPUT);
     //  irrecv.enableIRIn();              // Start the IR receiver
     
-    for(int i=0;i<100;i++) {
-        transmissionArray[i]='-';
-    }
-    index = 0;
-    PDC_in_transmission = false;
-    transmission_complete = false;
-    PDC_sync = false;
     PRODUCT_ID = product;
-    command_query = false;
-    command_write = false;
-    transmission_id = 0;
+    resetVariables();
+    
 }
 
 void PDCreceive::checkIR(IRrecv irrecv, decode_results results) {
@@ -71,9 +54,12 @@ void PDCreceive::printTransmission() {
 // finds a colon
 
 void PDCreceive::storeData(int key) {
-    if(key == -1)
-        transmissionArray[index] = '/';
-    else
+    if(key == -1) {
+        
+        // sometimes the first character of a transmission is weird
+        if(index > 0)
+           transmissionArray[index] = '/';
+    } else
         transmissionArray[index] = keyIndex[key];
 //    Serial.print(index); Serial.print(": "); Serial.println(transmissionArray[index]);
     if(key == 12) {
@@ -83,6 +69,14 @@ void PDCreceive::storeData(int key) {
         return;
     }
     index++;
+    if(index == 100) {
+        checkTransmission();
+        printTransmission();
+        
+        // think about replacing these with an overloaded function or something
+        memset(transmissionArray, 0, sizeof(transmissionArray));
+        index = 0;           
+    }
 }
 
 // checkTransmission checks to make sure there's a legitimate header to the transmission
@@ -95,6 +89,8 @@ void PDCreceive::checkTransmission() {
     long incoming_id = 0;
     for(int i=0; i<5; i++) {
         incoming_id *= 10;
+        if(transmissionArray[i]-'0' < 0 || transmissionArray[i]-'0'>9)
+            return;
         incoming_id += transmissionArray[i]-'0';//(transmissionArray[i]-'0')*(pow(10, i));
     }
     Serial.print("product id: "); Serial.println(incoming_id);
@@ -141,7 +137,8 @@ char PDCreceive::getChar(int index) {
 }
 
 // parseTransmission takes a completed transmission character by character and
-// parses it into useful information to tell the PDC what to do
+// parses it into useful information to tell the PDC what to do. returns false if
+// there is an error
 
 bool PDCreceive::parseTransmission(unsigned int write_array[][10]) {
     int chk_indx;
@@ -249,10 +246,7 @@ int PDCreceive::convertCodeToKey(long code) {
 }
 
 void PDCreceive::resetVariables() {
-    for(int i=0;i<100;i++) {
-        transmissionArray[i]=0;
-    }
-    index = 0;                  // this can cause problems sometimes !!!!!!
+    memset(transmissionArray, 0, sizeof(transmissionArray));
     PDC_in_transmission = false;
     transmission_complete = false;
     PDC_sync = false;
@@ -260,6 +254,7 @@ void PDCreceive::resetVariables() {
     command_write = false;
     transmission_id = 0;
 }
+
 
 long PDCreceive::pow(int base, int power) {
     long ans = 1;
