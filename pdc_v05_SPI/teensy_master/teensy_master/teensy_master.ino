@@ -168,7 +168,7 @@ void runSyncScreen() {
     incoming_write[1][i] = 0;
   }
 
-  pdcSend.sendSyncCode(PRODUCT_ID);
+  pdcSend.sendSyncCode();
   irrecv.enableIRIn();
 //  for(int i=0;(i<4 && !pdcReceive.PDC_sync);i++) {
     for(int j=0;(j<150 && !pdcReceive.PDC_sync);j++) {
@@ -194,8 +194,9 @@ void runSyncScreen() {
     pdcReceive.checkIR(irrecv, results);
     if(pdcReceive.transmission_complete) {
       if(!pdcReceive.parseTransmission(incoming_write)) {
+        // there was an error, display error message on PDC screen
         sendSPIdata(91);
-        // if no error, call interpretCommand, if the function returns false exit sync mode
+     // if no error, call interpretCommand, if the function returns false exit sync mode
       } else if(!interpretCommand(pdcReceive.transmission_id, incoming_write)) {
         pdcReceive.resetVariables();
         return;
@@ -322,12 +323,12 @@ boolean interpretCommand(int incoming_id, unsigned int incoming_write[][10]) {
         loadTimes(incoming_write);
         
         // this will be handled by the computer
-        pdcSend.sendConfirm(incoming_id);
+        pdcSend.sendCommand(incoming_id);
       } else if(incoming_id == 302) {
         Serial.println("loading new id");
         sendSPIdata(52);
         loadProductId(incoming_write);
-        pdcSend.sendConfirm(incoming_id);
+        pdcSend.sendCommand(incoming_id);
       }
       break;
     // for now case 9 only contains the quit command

@@ -25,8 +25,9 @@ const int greenLED = 2;
 char comp_char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy
 int char_index;
 
-PDCreceive DTDreceive(PRODUCT_ID);
+
 PDCsend DTDsend(38301);
+PDCreceive DTDreceive(PRODUCT_ID);
 IRrecv irrecv(8);    // create the IR library
 decode_results results;
 

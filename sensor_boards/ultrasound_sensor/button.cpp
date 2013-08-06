@@ -2,14 +2,14 @@
 
 button:: button(){
   lastDebounceTime=0;
-  debounce_delay=300000; 
+  debounce_delay=600000; 
   pressed=false; 
   interrupt_pin=0; 
 }
 
 button:: button(int pin){
   lastDebounceTime=0;
-  debounce_delay=300000; 
+  debounce_delay=600000; 
   pressed=false; 
   interrupt_pin=pin ; 
 }

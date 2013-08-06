@@ -134,7 +134,7 @@ void save_times() {
 void IRsync() {
   sensorSend.sendArray();
   unsigned int incoming_write[2][10] = {};
-  unsigned int data_time_temp[2][30] = {};
+  unsigned int data_time_temp[2][MAXPAIRS] = {};
   int temp_index = 1;
   int trans_id = TRANS_ID; // gets changed to 0 after the first partial array is sent
                            // so the rest appear as a continuation of the entire array
@@ -143,7 +143,7 @@ void IRsync() {
   data_time_temp[0][0] = 0;
   data_time_temp[1][0] = DIVIDE_FACTOR;
   for(int i=0;i<eeprom_time_index;i++) {
-    if(temp_index == 30) {
+    if(temp_index == MAXPAIRS) {
       sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
       sensorSend.sendArray(false);      // false tells the library not to send the EoT character
 //      sensorSend.printTransmission();
