@@ -29,7 +29,6 @@ void loop()
 {
     uint8_t buf[VW_MAX_MESSAGE_LEN];
     uint8_t buflen = VW_MAX_MESSAGE_LEN;
-    
     // Serial.println(VW_MAX_MESSAGE_LEN);
     
     //uint8_t buf[5];
@@ -43,13 +42,14 @@ void loop()
 
         for (int i = 0; i < buflen; i++) {
             //Serial.print(buf[i], HEX);
+//            the_char = buf[i];
             Serial.write(buf[i]);
             //Serial.print(buf[i]);
         }
         //Serial.print("\n");
-        delay(1000);
-        digitalWrite(led_pin, LOW);
-        delay(1000);
+//        delay(1000);
+//        digitalWrite(led_pin, LOW);
+//        delay(1000);
     }
     /*
     else
