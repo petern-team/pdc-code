@@ -1,4 +1,3 @@
-
 /*
 This sketch decodes IR messages written with category/ time pairs.
 Then it prints an opening sequence to the computer, followed by a 
