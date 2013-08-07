@@ -64,7 +64,7 @@ void loop()
   if(DTDreceive.PDC_sync) {
     Serial.println("sending sync codes");
     for(int i=0;i<5;i++) {
-      DTDsend.sendSyncCode(PRODUCT_ID);
+      DTDsend.sendSyncCode();
       delay(50);
     }
     DTDreceive.PDC_sync = false;
@@ -75,10 +75,10 @@ void loop()
 }
 
 void checkLEDstate() {
-  if(DTDreceive.PDC_in_transmission && digitalRead(greenLED)) {
+  if(DTDreceive.IR_busy && digitalRead(greenLED)) {
     digitalWrite(greenLED, LOW);
     digitalWrite(redLED, HIGH);
-  } else if(!DTDreceive.PDC_in_transmission && digitalRead(redLED)) {
+  } else if(!DTDreceive.IR_busy && digitalRead(redLED)) {
     digitalWrite(greenLED, HIGH);
     digitalWrite(redLED, LOW);
   }

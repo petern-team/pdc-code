@@ -8,14 +8,13 @@
 
 #include <MemoryFree.h>
 #include <EEPROM.h>
-#include <VirtualWire.h>
-#include <RFsend.h>
-#include <RFreceive.h>
+//#include <VirtualWire.h>
+#include <PDCsend.h>
+#include <PDCreceive.h>
+#include <IRremote.h>
 #include "button.h"
 
-const int RECEIVEPIN = 9;
-const int RFTRANSMIT = 12;
-const int TRANSMIT_EN_PIN = 13;    // doesn't really do anything
+const int RECEIVEPIN = 10;
 const int BUTTON = 2;
 const int SENSORPIN = A0;
 const int ARR_SIZE = 10;
@@ -23,7 +22,7 @@ const int LOUD_TRANS_ID = 511;
 const int ULTSND_TRANS_ID = 512;
 const int STORAGE_START = 250;
 int PRODUCT_ID = 27301;     // BRD01, eventually add EEPROM saving and IR writing for this
-long DATA_INTERVAL = 500;   // send interval in milliseconds, add a way to save this in EEPROM
+long DATA_INTERVAL = 1000;   // send interval in milliseconds, add a way to save this in EEPROM
 int DIVIDE_FACTOR;          // number to divide millis() by for time stamps.
 volatile long overflow_1;
 
@@ -39,11 +38,11 @@ int data_val;
 
 boolean trans_complete;
 
-RFsend sensorSend;
-RFreceive sensorRecv;
-////
-//IRrecv irrecv(RECEIVEPIN);
-//decode_results results;
+PDCsend sensorSend;
+PDCreceive sensorRecv;
+//
+IRrecv irrecv(RECEIVEPIN);
+decode_results results;
 
 button sync_button(0);
 
@@ -51,14 +50,14 @@ void setup() {
   sensorSend.my_id = PRODUCT_ID;
   Serial.begin(9600);
   
-  // set a timer interrupt to happen every millisecond (fastest sampling rate allowed for sensor)
+  // set a timer interrupt to happen every 10 milliseconds = 100 hz (fastest sampling rate allowed)
   
   cli();
   //set timer0 interrupt at 1.6kHz
   TCCR2A = 0;// set entire TCCR0A register to 0
   TCCR2B = 0;// same for TCCR0B
   TCNT2  = 0;//initialize counter value to 0
-  // set compare match register for 1000hz increments
+  // set compare match register for 1600hz increments
   OCR2A = 250;// = (16*10^6) / (64*1024) - 1 (must be <256)
   // turn on CTC mode
   TCCR2A |= (1 << WGM21);
@@ -85,15 +84,7 @@ void setup() {
   eeprom_stor_index = STORAGE_START;
   trans_complete = false;
   overflow_1 = 0;
-//  irrecv.enableIRIn();
-  
-// RF setup
-   // Initialise the IO and ISR
-    vw_set_tx_pin(RFTRANSMIT);
-    //  vw_set_rx_pin(receive_pin);
-    vw_set_ptt_pin(TRANSMIT_EN_PIN);
-    //vw_set_ptt_inverted(true); // Required for DR3100
-    vw_setup(2400);	 // Bits per sec
+  irrecv.enableIRIn();
   
   // if samples are less than one a second report, hundredths of a second; if they're
   // taken b/t once a second and once every ten seconds report tenths of seconds;
@@ -111,7 +102,7 @@ void setup() {
 
 void loop() {
   // check if the docking station is trying to sync
-//    sensorRecv.checkIR(irrecv, results);
+    sensorRecv.checkIR(irrecv, results);
     if(sensorRecv.transmission_complete) {
       if(sensorRecv.PDC_sync) {
         Serial.println("syncing");
@@ -125,13 +116,10 @@ void loop() {
       sync_button.pressed = false;
       trans_complete = true;
       sendData();
-//      testRF();
     }
     
     // every DATA_INTERVAL seconds/100 sample the selected sensor
-    if(!trans_complete && overflow_1 >= DATA_INTERVAL-1) {   
-        overflow_1 = 0;
-        time_stamps[index] = millis()/ DIVIDE_FACTOR;
+    if(!trans_complete && overflow_1 >= DATA_INTERVAL) {   
 // BEGIN ULTRASOUND SENSOR CODE
         pinMode(SENSORPIN, OUTPUT);
         digitalWrite(SENSORPIN, LOW);
@@ -165,9 +153,10 @@ void loop() {
 //        Serial.println(data_val);
 // END LOUDNESS SENSOR, BEGIN STORAGE CODE
         storage[index] = data_val;
+        time_stamps[index] = millis()/ DIVIDE_FACTOR;
         index++;
         
-        
+        overflow_1 = 0;
       }
 
     // if the arrays are running out of room store the collected values in EEPROM
@@ -196,7 +185,7 @@ void save_times() {
 
 // send all of the collected data to the docking station in arrays of size MAXPAIRS
 void sendData() {
-//  sensorSend.sendArray();
+  sensorSend.sendArray();
 //  long start_send = micros();
 //  Serial.print((micros()-start_send)/1000); Serial.println(" millis to create array for first 30");
   unsigned int data_time_temp[2][MAXPAIRS] = {};
@@ -209,7 +198,7 @@ void sendData() {
   data_time_temp[1][0] = DIVIDE_FACTOR;
   for(int i=0;i<eeprom_time_index;i++) {
     if(temp_index == MAXPAIRS) {
-      sensorSend.createArray(trans_id, data_time_temp, temp_index);
+      sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
       sensorSend.sendArray(false);      // false tells the library not to send the EoT character
 //      sensorSend.printTransmission();
       trans_id = 0;
@@ -221,7 +210,7 @@ void sendData() {
 //    Serial.print(", data value: "); Serial.println(data_time_temp[1][temp_index]);
     temp_index++;
   }
-  sensorSend.createArray(trans_id, data_time_temp, temp_index);
+  sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
 //  sensorSend.printTransmission();
   sensorSend.sendArray();
   Serial.println("done sending");
@@ -233,14 +222,14 @@ void DTDsync() {
   unsigned int incoming_write[2][10] = {};
   bool quit = false;
   sensorSend.sendSyncCode();
-//  irrecv.enableIRIn();
+  irrecv.enableIRIn();
   sensorRecv.resetVariables();
   while(!quit) {
-//    sensorRecv.checkIR(irrecv, results);
+    sensorRecv.checkIR(irrecv, results);
     if(sensorRecv.transmission_complete) {
       // there was an error so ask for a resend
       if(!sensorRecv.parseTransmission(incoming_write)) {
-//        sensorSend.sendCommand(801);
+        sensorSend.sendCommand(801);
       } else {
         interpretCommand(sensorRecv.transmission_id, incoming_write, &quit);
       }
@@ -262,11 +251,11 @@ void interpretCommand(int incoming_id, unsigned int incoming_write[][10], bool *
 void waitForConfirm() {
   unsigned int incoming_write[2][10] = {};
   // check if the DTD wants a resend of the codes, otherwise clear the stored data
-//  irrecv.enableIRIn();
+  irrecv.enableIRIn();
   overflow_1 = 0;
   // wait 15 seconds
   while(overflow_1 < 15000) {
-//    sensorRecv.checkIR(irrecv, results);
+    sensorRecv.checkIR(irrecv, results);
     
     // if a confirm code is received (confirm = 7__) then reset variables and return.
     // if a resend code is received (8__) then the function calls itself
@@ -333,21 +322,4 @@ void resetStorage() {
   eeprom_stor_index = STORAGE_START;
 //  trans_complete = false;    // uncomment this to continue sampling after sending data
   overflow_1 = 0;
-}
-
-void testRF() {
-  Serial.println("testing RF");
-  char msg[27] = {'a','b','c','d','e',
-            'f','g','h','i','j','k','l',
-            'm','n','o','p','q','r','s',
-            't','u','v','w','x','y','z',
-            '0'};
-
-
-    //msg[6] = count;
-//    digitalWrite(led_pin, HIGH); // Flash a light to show transmitting
-    vw_send((uint8_t *)msg, 26);
-    vw_wait_tx(); // Wait until the whole message is gone
-//    digitalWrite(led_pin, LOW);
-//    delay(1000);
 }

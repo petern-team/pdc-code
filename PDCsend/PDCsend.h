@@ -15,24 +15,9 @@
 
 #ifndef IRKEYCODES
 #define IRKEYCODES
-//const long irKeyCodes [14] = {
-//    0x18E738A7,    //numbers, this is 0; index 0-9
-//    0x18E748A7,    // 1
-//    0x18E768A7,    // 2
-//    0x18E778A7,    // 3
-//    0x18E788A7,    // 4
-//    0x18E798A7,    // 5
-//    0x18E718B7,    // 6
-//    0x18E728B7,    // 7
-//    0x18E738B7,    // 8
-//    0x18E758B7,    // 9
-//    0x18E718C7,    // (comma)
-//    0x18E728C7,    // (semicolon)
-//    0x18E738C7,    // (colon)
-//    0x18E7C8E7};   // end of transmission
 
 const char irKeyCodes[] = {'0','1','2','3','4','5','6','7','8','9',',',';',':'};
-const char keyIndex[13] = {'0','1','2','3','4','5','6','7','8','9',',',';',':'};
+const int MAXPAIRS = 30;
 #endif
 
 class PDCsend {
@@ -40,6 +25,7 @@ public:
     PDCsend();
     PDCsend(unsigned int);
     
+    // there's a bug in DTDv04 so this has to be defined twice
     static const int MAXPAIRS = 30;
     
     // all createArray functions take in a list of times and put them in a 2D array to be sent
@@ -53,9 +39,10 @@ public:
     
     // send all of the times to the docking station using IR codes
     void sendArray(bool last = true);
+//    void sendRFArray(bool last = true);
     void sendCharArray(char char_arr[], int length);
-    void sendSyncCode(long);
-    void sendConfirm(int);
+    void sendSyncCode();
+    void sendCommand(int);
     
     
     // debugging function used to print transmissionArray to serial on the PDC
@@ -68,7 +55,11 @@ public:
 private:
     static const int NUM_COMPS = 5;    // maximum number of single-digit time components (1-99999)
     
+    // choose one of these next two, depending on if you're using IR or RF
     char transmissionArray[6][MAXPAIRS*2+3]; //start with a maximum size of 5 digits per number
+//    char RFtransmissionArray[14+6*2*MAXPAIRS];
+    
+    
     int num_pairs;
     // the number of category-time pairs that can be expected in a transmission
     int number_of_times;              // always intializes to 8 in version 1
@@ -83,9 +74,9 @@ private:
     int checkLength(int[]);
     int checkIntLength(long);
     
-    void writeColumn(int index, int data);
+    void writeColumn(int index, unsigned int data);
     void sendColumn(int index);
-    void sendAndDelay(long code);
+    void sendAndDelay(char code);
     
     // called by create array to find the checksum number
     int findCheckSum(unsigned int data_array[], int length);

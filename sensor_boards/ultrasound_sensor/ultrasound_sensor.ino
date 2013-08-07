@@ -14,7 +14,7 @@
 #include <IRremote.h>
 #include "button.h"
 
-const int RECEIVEPIN = 9;
+const int RECEIVEPIN = 8;
 const int RFTRANSMIT = 12;
 const int TRANSMIT_EN_PIN = 13;    // doesn't really do anything
 const int BUTTON = 2;
@@ -264,7 +264,7 @@ void waitForConfirm() {
   irrecv.enableIRIn();
   overflow_1 = 0;
   // wait 15 seconds
-  while(overflow_1 < 1500) {
+  while(overflow_1 < 15000) {
     sensorRecv.checkIR(irrecv, results);
     
     // if a confirm code is received (confirm = 7__) then reset variables and return.

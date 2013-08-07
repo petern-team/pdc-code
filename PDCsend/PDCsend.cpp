@@ -37,15 +37,15 @@ PDCsend::PDCsend(unsigned int product_id) {
 // !!! adjust for new arrray size !!!
 
 void PDCsend::printTransmission() {
-    long the_code;
+//    long the_code;
     for(int i=0;i<6;i++) {
         for(int j=0;j<num_pairs*2+3;j++) {
-            the_code = transmissionArray[i][j];
-            if(the_code <= 9) {
-                Serial.print(the_code, HEX);
-            } else {
-                Serial.print(convertCodeToKey(the_code));
-            }
+//            the_code = transmissionArray[i][j];
+//            if(the_code <= 9) {
+                Serial.print(transmissionArray[i][j]);
+//            } else {
+//                Serial.print(convertCodeToKey(the_code));
+//            }
             Serial.print("   ");
         }
         Serial.println();
@@ -58,9 +58,10 @@ void PDCsend::printTransmission() {
 // columns 3-7 contain the digits that make up the time value. (ones go in column 3, tens go in
 // column 4, etc.)
 
-void PDCsend::createArray(int trans_id, unsigned int time_array[]) {
+void PDCsend::createArray(int outgoing_id, unsigned int time_array[]) {
     Serial.println("create array called");
     num_pairs = 8;
+    trans_id = outgoing_id;
     int column_index;
     
     // first write the triplet of product id, transmission id, checksum
@@ -81,37 +82,10 @@ void PDCsend::createArray(int trans_id, unsigned int time_array[]) {
 //    num_pairs = number_of_times;
 }
 
-// createDataArray works the same way but also takes in an array of time stamps and
-// the length of the array
 
 
-//void PDCsend::createDataArray(int trans_id, unsigned int data_array[], unsigned int time_stamps[], int length){
-//    
-//    Serial.print("create array called, length: "); Serial.println(length);
-//    int column_index;
-//    int checksum;
-//    num_pairs = length;
-//    
-//    // first write the triplet of product id, transmission id, checksum
-//    Serial.print("calling writecolumn with product_id: "); Serial.println(my_id);
-//    writeColumn(0, my_id);
-//    writeColumn(1, trans_id);
-//    checksum = findCheckSum(data_array, length)+findCheckSum(time_stamps, length);
-//    Serial.print("checksum is "); Serial.println(checksum);
-//    writeColumn(2, checksum);
-//    
-//    // this is the main loop for writing times into the array
-//    for (int i=0; i<num_pairs; i++) {
-//        //        int theTime = time_array[i];
-//        column_index = (i*2)+3;
-//        writeColumn(column_index, time_stamps[i]);      // first of the pair will be the category number
-//        writeColumn(++column_index, data_array[i]);
-//        
-//    }
-//}
-
-
-// send part of a longer array. if trans_id isn't == 0 send the product+id, trans_id, etc.
+// send a complete array or part of a longer array. if trans_id isn't == 0
+// send the product_id, trans_id, etc.
 
 void PDCsend::createPartialArray(int outgoing_id, unsigned int data_time_arr[][MAXPAIRS], int length) {
     trans_id = outgoing_id;
@@ -155,9 +129,9 @@ void PDCsend::sendArray(bool last) {
         for(int i=0; i<3; i++) {
             sendColumn(i);
             if(i == 2) {            // send a semicolon or a comma after each number
-                sendAndDelay(irKeyCodes[11]);
+                sendAndDelay(';');
             } else {
-                sendAndDelay(irKeyCodes[10]);
+                sendAndDelay(',');
             }
         }
         column_index = 3;
@@ -166,22 +140,25 @@ void PDCsend::sendArray(bool last) {
     
     for (int i=0; i<num_pairs; i++) {
         sendColumn(column_index++);
-        sendAndDelay(irKeyCodes[10]);
+        sendAndDelay(',');
         sendColumn(column_index++);
-        sendAndDelay(irKeyCodes[11]);
+        sendAndDelay(';');
     }
     if(last) 
-        irsend.sendSony(irKeyCodes[12], 32);            // colon means end of transmission
+        irsend.sendSony(':', 32);            // colon means end of transmission
 }
+
 
 // sendCharArray is meant to pass along a character array sent from the computer to
 // the PDC
 
+// so far has NOT been tested
+
 void PDCsend::sendCharArray(char char_arr[], int length) {
     long code;
     for(int i=0;i<length;i++) {
-        code = convertCharToCode(char_arr[i]);
-        Serial.println(code, HEX);
+        code = char_arr[i];//convertCharToCode(char_arr[i]);
+//        Serial.println(code);
         sendAndDelay(code);
     }
 }
@@ -189,9 +166,9 @@ void PDCsend::sendCharArray(char char_arr[], int length) {
 // sendSyncCode sends the product_id followed by a colon. Devices will generally
 // keep sending this as a test until they get a reply from the DTD
 
-void PDCsend::sendSyncCode(long product_id) {
+void PDCsend::sendSyncCode() {
     int ID_components[NUM_COMPS] = {0,0,0,0,0};
-    breakItDown(product_id, ID_components);
+    breakItDown(my_id, ID_components);
     
     for(int i=4;i>=0;i--) {
         sendAndDelay(irKeyCodes[ID_components[i]]);
@@ -205,7 +182,7 @@ void PDCsend::sendSyncCode(long product_id) {
 // sendConfirm transforms a transmission id into a confirmation code and sends it to
 // the DTD
 
-void PDCsend::sendConfirm(int trans_id) {
+void PDCsend::sendCommand(int trans_id) {
     int product_id_arr[NUM_COMPS];
     int trans_id_arr[3];
     trans_id = trans_id%100 + 700;
@@ -228,19 +205,19 @@ void PDCsend::sendConfirm(int trans_id) {
 // writeColumn takes a column index and an integer and writes each digit of the integer
 // into a different row of te column
 
-void PDCsend::writeColumn(int index, int data) {
-    Serial.print("index "); Serial.print(index); Serial.print(": ");
-    Serial.print(data); Serial.println(); // Serial.print(", ");
+void PDCsend::writeColumn(int index, unsigned int data) {
+//    Serial.print("index "); Serial.print(index); Serial.print(": ");
+//    Serial.print(data); Serial.println(); // Serial.print(", ");
     int time_components[NUM_COMPS];
     int length;
     breakItDown(data, time_components);
     length = checkLength(time_components);
-    transmissionArray[0][index] = length;
+    transmissionArray[0][index] = length+'0';
 //    long reconstruct = 0;
 //    Serial.print("length: "); Serial.println(transmissionArray[0][index]);
     
     for(int i=1;i<=length;i++) {
-        transmissionArray[i][index]=time_components[i-1];
+        transmissionArray[i][index]=time_components[i-1]+'0';
 //        Serial.print("index"); Serial.print(index); Serial.print(": ");
 //        Serial.println(transmissionArray[i][index]);
     }
@@ -255,20 +232,20 @@ void PDCsend::writeColumn(int index, int data) {
 // using the sendSony IR protocol
 
 void PDCsend::sendColumn(int index) {
-    int length = transmissionArray[0][index];
+    int length = transmissionArray[0][index]-'0';
 //    Serial.print("send length: "); Serial.println(length);
     for(int i=length;i>=1;i--) {
-//        Serial.println(transmissionArray[i][index], HEX);
-        sendAndDelay(irKeyCodes[transmissionArray[i][index]]);
+//        Serial.println(transmissionArray[i][index]);
+        sendAndDelay(transmissionArray[i][index]);
     }
 }
 
 // finally replace all those annoying irsend lines
-void PDCsend::sendAndDelay(long code) {
-    irsend.sendSony(code, 32);
-    delay(35);
+void PDCsend::sendAndDelay(char code) {
+    unsigned long to_send = code;
+    irsend.sendSony(to_send, 32);
+    delay(25);
 }
-
 
 // findCheckSum checks the time_array to determine how many number will be sent, not
 // including the first triplet
@@ -281,7 +258,7 @@ int PDCsend::findCheckSum(unsigned int data_array[], int length) {
 //        checksum++;
         checksum += checkIntLength(data_array[i]);
     }
-    Serial.print("checksum: "); Serial.println(checksum);
+//    Serial.print("checksum: "); Serial.println(checksum);
     return checksum;
 }
 
@@ -317,26 +294,6 @@ int PDCsend::checkIntLength(long item) {
     if(item < 10000)
         return 4;
     return 5;
-}
-
-int PDCsend::convertCodeToKey(long code) {
-    
-    for( int i=0; i < 14; i++)  {
-        if(code == irKeyCodes[i])   {
-            return i; // found the key so return it
-        }
-    }
-    return -1;
-}
-
-long PDCsend::convertCharToCode(char the_char) {
-    for(int i=0;i<13;i++) {
-        if(the_char == keyIndex[i]) {
-            return irKeyCodes[i];
-        }
-    }
-    Serial.println("error no code found");
-    return -1;
 }
 
 long PDCsend::pow(int base, int power) {
