@@ -11,7 +11,7 @@
 #define SEARCH12 4095
 #define SEARCH16 65535
 
-#define FINDGROUP SEARCH3
+#define FINDGROUP SEARCH4
 
 const byte HEADER = B100011;
 const byte TAIL = B111111;

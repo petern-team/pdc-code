@@ -8,15 +8,12 @@
 
 #include <MemoryFree.h>
 #include <EEPROM.h>
-#include <VirtualWire.h>
 #include <PDCsend.h>
 #include <PDCreceive.h>
 #include <IRremote.h>
 #include "button.h"
 
-const int RECEIVEPIN = 8;
-const int RFTRANSMIT = 12;
-const int TRANSMIT_EN_PIN = 13;    // doesn't really do anything
+const int RECEIVEPIN = 10;
 const int BUTTON = 2;
 const int SENSORPIN = A0;
 const int ARR_SIZE = 10;
@@ -40,7 +37,7 @@ int data_val;
 
 boolean trans_complete;
 
-PDCsend sensorSend;
+//PDCsend sensorSend;
 PDCreceive sensorRecv;
 //
 IRrecv irrecv(RECEIVEPIN);
@@ -49,8 +46,10 @@ decode_results results;
 button sync_button(0);
 
 void setup() {
-  sensorSend.my_id = PRODUCT_ID;
+//  sensorSend.my_id = PRODUCT_ID;
   Serial.begin(9600);
+    Serial.print("free memory: ");
+  Serial.println(freeMemory());
   
   // set a timer interrupt to happen every 10 milliseconds = 100 hz (fastest sampling rate allowed)
   
@@ -88,14 +87,6 @@ void setup() {
   overflow_1 = 0;
   irrecv.enableIRIn();
   
-// RF setup
-   // Initialise the IO and ISR
-    vw_set_tx_pin(RFTRANSMIT);
-    //  vw_set_rx_pin(receive_pin);
-    vw_set_ptt_pin(TRANSMIT_EN_PIN);
-    //vw_set_ptt_inverted(true); // Required for DR3100
-    vw_setup(2400);	 // Bits per sec
-  
   // if samples are less than one a second report, hundredths of a second; if they're
   // taken b/t once a second and once every ten seconds report tenths of seconds;
   // otherwise only report seconds
@@ -106,8 +97,7 @@ void setup() {
   else 
     DIVIDE_FACTOR = 1000;
   
-  Serial.print("free memory: ");
-  Serial.println(freeMemory());
+
 }
 
 void loop() {
@@ -120,59 +110,59 @@ void loop() {
       }
     }
     
-    // if the button has been pressed, send all collected data
-    if(sync_button.pressed) {
-      save_times();
-      sync_button.pressed = false;
-      trans_complete = true;
-      sendData();
-    }
-    
-    // every DATA_INTERVAL seconds/100 sample the selected sensor
-    if(!trans_complete && overflow_1 >= DATA_INTERVAL) {   
-// BEGIN ULTRASOUND SENSOR CODE
-        pinMode(SENSORPIN, OUTPUT);
-        digitalWrite(SENSORPIN, LOW);
-        delayMicroseconds(2);
-        digitalWrite(SENSORPIN, HIGH);
-        delayMicroseconds(5);
-        digitalWrite(SENSORPIN, LOW);
-      
-        // The same pin is used to read the signal from the PING))): a HIGH
-        // pulse whose duration is the time (in microseconds) from the sending
-        // of the ping to the reception of its echo off of an object.
-        pinMode(SENSORPIN, INPUT);
-        duration = pulseIn(SENSORPIN, HIGH);
-      
-        // convert the time into a distance, eventually adda way to choose the 
-        // measuring system (in. or cm)
-//        inches = microsecondsToInches(duration);
-        if(duration > 37000)
-          cm = -1;
-        else
-          cm = microsecondsToCentimeters(duration);
-        
-//        Serial.print(inches);
-//        Serial.print("in, ");
-        Serial.print(cm);
-        Serial.print("cm");
-        Serial.println();
-        data_val = cm;
-// END ULTRASOUND SENSOR, BEGIN LOUDNESS SENSOR CODE
-//        data_val = analogRead(SENSORPIN);
-//        Serial.println(data_val);
-// END LOUDNESS SENSOR, BEGIN STORAGE CODE
-        storage[index] = data_val;
-        time_stamps[index] = millis()/ DIVIDE_FACTOR;
-        index++;
-        
-        overflow_1 = 0;
-      }
-
-    // if the arrays are running out of room store the collected values in EEPROM
-    if(index == ARR_SIZE-1) {
-      save_times();
-    }
+//    // if the button has been pressed, send all collected data
+//    if(sync_button.pressed) {
+//      save_times();
+//      sync_button.pressed = false;
+//      trans_complete = true;
+//      sendData();
+//    }
+//    
+//    // every DATA_INTERVAL seconds/100 sample the selected sensor
+//    if(!trans_complete && overflow_1 >= DATA_INTERVAL) {   
+//// BEGIN ULTRASOUND SENSOR CODE
+//        pinMode(SENSORPIN, OUTPUT);
+//        digitalWrite(SENSORPIN, LOW);
+//        delayMicroseconds(2);
+//        digitalWrite(SENSORPIN, HIGH);
+//        delayMicroseconds(5);
+//        digitalWrite(SENSORPIN, LOW);
+//      
+//        // The same pin is used to read the signal from the PING))): a HIGH
+//        // pulse whose duration is the time (in microseconds) from the sending
+//        // of the ping to the reception of its echo off of an object.
+//        pinMode(SENSORPIN, INPUT);
+//        duration = pulseIn(SENSORPIN, HIGH);
+//      
+//        // convert the time into a distance, eventually adda way to choose the 
+//        // measuring system (in. or cm)
+////        inches = microsecondsToInches(duration);
+//        if(duration > 37000)
+//          cm = -1;
+//        else
+//          cm = microsecondsToCentimeters(duration);
+//        
+////        Serial.print(inches);
+////        Serial.print("in, ");
+//        Serial.print(cm);
+//        Serial.print("cm");
+//        Serial.println();
+//        data_val = cm;
+//// END ULTRASOUND SENSOR, BEGIN LOUDNESS SENSOR CODE
+////        data_val = analogRead(SENSORPIN);
+////        Serial.println(data_val);
+//// END LOUDNESS SENSOR, BEGIN STORAGE CODE
+//        storage[index] = data_val;
+//        time_stamps[index] = millis()/ DIVIDE_FACTOR;
+//        index++;
+//        
+//        overflow_1 = 0;
+//      }
+//
+//    // if the arrays are running out of room store the collected values in EEPROM
+//    if(index == ARR_SIZE-1) {
+//      save_times();
+//    }
 }
 
 // save the collected data into eeprom
@@ -195,43 +185,43 @@ void save_times() {
 
 // send all of the collected data to the docking station in arrays of size MAXPAIRS
 void sendData() {
-  sensorSend.sendArray();
-//  long start_send = micros();
-//  Serial.print((micros()-start_send)/1000); Serial.println(" millis to create array for first 30");
-  unsigned int data_time_temp[2][MAXPAIRS] = {};
-  int temp_index = 1;
-  int trans_id = ULTSND_TRANS_ID; // gets changed to 0 after the first partial array is sent
-                           // so the rest appear as a continuation of the entire array
-                           
-  Serial.print("irsync, index: "); Serial.println(eeprom_time_index);
-  data_time_temp[0][0] = 0;
-  data_time_temp[1][0] = DIVIDE_FACTOR;
-  for(int i=0;i<eeprom_time_index;i++) {
-    if(temp_index == MAXPAIRS) {
-      sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
-      sensorSend.sendArray(false);      // false tells the library not to send the EoT character
-//      sensorSend.printTransmission();
-      trans_id = 0;
-      temp_index = 0;
-    }
-    data_time_temp[0][temp_index] = word(EEPROM.read(2*i), EEPROM.read(2*i+1));
-//    Serial.print("time: "); Serial.print(data_time_temp[0][temp_index]);
-    data_time_temp[1][temp_index] = word(EEPROM.read(2*(i+STORAGE_START)), EEPROM.read(1+2*(i+STORAGE_START)));
-//    Serial.print(", data value: "); Serial.println(data_time_temp[1][temp_index]);
-    temp_index++;
-  }
-  sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
-//  sensorSend.printTransmission();
-  sensorSend.sendArray();
-  Serial.println("done sending");
-  waitForConfirm();
+//  sensorSend.sendArray();
+////  long start_send = micros();
+////  Serial.print((micros()-start_send)/1000); Serial.println(" millis to create array for first 30");
+//  unsigned int data_time_temp[2][MAXPAIRS] = {};
+//  int temp_index = 1;
+//  int trans_id = ULTSND_TRANS_ID; // gets changed to 0 after the first partial array is sent
+//                           // so the rest appear as a continuation of the entire array
+//                           
+//  Serial.print("irsync, index: "); Serial.println(eeprom_time_index);
+//  data_time_temp[0][0] = 0;
+//  data_time_temp[1][0] = DIVIDE_FACTOR;
+//  for(int i=0;i<eeprom_time_index;i++) {
+//    if(temp_index == MAXPAIRS) {
+//      sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
+//      sensorSend.sendArray(false);      // false tells the library not to send the EoT character
+////      sensorSend.printTransmission();
+//      trans_id = 0;
+//      temp_index = 0;
+//    }
+//    data_time_temp[0][temp_index] = word(EEPROM.read(2*i), EEPROM.read(2*i+1));
+////    Serial.print("time: "); Serial.print(data_time_temp[0][temp_index]);
+//    data_time_temp[1][temp_index] = word(EEPROM.read(2*(i+STORAGE_START)), EEPROM.read(1+2*(i+STORAGE_START)));
+////    Serial.print(", data value: "); Serial.println(data_time_temp[1][temp_index]);
+//    temp_index++;
+//  }
+//  sensorSend.createPartialArray(trans_id, data_time_temp, temp_index);
+////  sensorSend.printTransmission();
+//  sensorSend.sendArray();
+//  Serial.println("done sending");
+//  waitForConfirm();
 }
 
 // DTDsync is called when the docking station initiates a sync with the sensor board
 void DTDsync() {
   unsigned int incoming_write[2][10] = {};
   bool quit = false;
-  sensorSend.sendSyncCode();
+//  sensorSend.sendSyncCode();
   irrecv.enableIRIn();
   sensorRecv.resetVariables();
   while(!quit) {
@@ -239,7 +229,7 @@ void DTDsync() {
     if(sensorRecv.transmission_complete) {
       // there was an error so ask for a resend
       if(!sensorRecv.parseTransmission(incoming_write)) {
-        sensorSend.sendCommand(801);
+//        sensorSend.sendCommand(801);
       } else {
         interpretCommand(sensorRecv.transmission_id, incoming_write, &quit);
       }

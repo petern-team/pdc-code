@@ -131,5 +131,5 @@ void pinChange() {
   byte_index &= B111; 
   if(!byte_index) index++;  //bit_index was just reset so increment the array index
    
-  TCNT1 = 0;
+//  TCNT1 = 0;
 }

@@ -1,10 +1,3 @@
-/* Features to be teseted:
-- new char_arr configuration and pointer functions
-- switched irrecv to 8
-- added sendCharArray to PDCsend
-- changed PDCreceive to have a transmission_complete variable (seems to work)
-
-
 /*
 This sketch decodes IR messages written with category/ time pairs.
 Then it prints an opening sequence to the computer, followed by a 
@@ -13,11 +6,9 @@ character number (sometimes) and all the number pairs.
 
 #include <IRremote.h>           // IR remote control library
 #include "audioCommPin.h"
-//#include <RFsend.h>
-//#include <RFreceive.h>
+#include <RFsend.h>
+#include <RFreceive.h>
 #include <VirtualWire.h>
-#include <PDCsend.h>
-#include <PDCreceive.h>
 #include <MemoryFree.h>
 //#include "../../../Tufts/CEEO/summer_13/pdc-code/PDCreceive/PDCreceive.h"
 
@@ -25,16 +16,17 @@ const unsigned int PRODUCT_ID = 38301; //"DTD01"
 const int RECEIVE_PIN = 8;
 const int redLED = 3;
 const int greenLED = 2;
-const int RF_receive_pin = 13;
-const int transmit_en_pin = 4;
+const int RFRECEIVE = 13;
+const int RFTRANSMIT = 12;
+const int TRANSMIT_EN_PIN = 4;
 
 char comp_char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy
 int char_index;
 
 
-PDCsend DTDsend(PRODUCT_ID);
-PDCreceive DTDreceive;
-//RFreceive DTDRFreceive;
+//PDCreceive DTDreceive;
+RFsend DTDsend(PRODUCT_ID);
+RFreceive DTDreceive;
 //IRrecv irrecv(RECEIVE_PIN);    // create the IR library
 //decode_results results;
 
@@ -52,8 +44,9 @@ void setup() {
   comp_transmission = false;
   
   // RF setup
-    vw_set_rx_pin(RF_receive_pin);
-    vw_set_ptt_pin(transmit_en_pin);
+    vw_set_tx_pin(RFTRANSMIT);
+    vw_set_rx_pin(RFRECEIVE);
+    vw_set_ptt_pin(TRANSMIT_EN_PIN);
     //vw_set_ptt_inverted(true); // Required for DR3100
     vw_setup(2400);	 // Bits per sec
 
@@ -62,7 +55,6 @@ void setup() {
   // initialize variables and timers for audio-wire communication
   resetStorage();
   initAudioPin();  
-//  irrecv.enableIRIn();
 
 
   
@@ -70,8 +62,6 @@ void setup() {
   char_index = 0;
   Serial.print("free memory: ");
   Serial.println(freeMemory());
-  DTDsend.sendArray();
-  DTDsend.sendArray();
 }
 
 
@@ -91,40 +81,40 @@ void loop() {
     
     // maybe should add a way to check if the PDC is syncing before sending info
     // eventually come up with a cleaner way to change LEDs
-    DTDreceive.IR_busy = true;
+    DTDreceive.RF_busy = true;
     checkLEDstate();
     
     DTDsend.sendCharArray(comp_char_arr, char_index);      // TEST THIS
     resetStorage();
     resetChars();
-    DTDreceive.IR_busy = false;
+    DTDreceive.RF_busy = false;
 //    irrecv.enableIRIn();
   }
   
   // check for IR transmission
 //  DTDreceive.checkIR(irrecv, results); 
-  if(DTDreceive.transmission_complete) {
-    if(DTDreceive.PDC_sync) {
-//      delay(50);
-      Serial.println("syncing..");
-//      for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
-//        DTDsend.sendSyncCode();
-//        delay(25);
-//      }
-//      irrecv.enableIRIn();
-    } else {
-      DTDreceive.printTransmission();
-    }
-    DTDreceive.resetVariables();
-  }
+//  if(DTDreceive.transmission_complete) {
+//    if(DTDreceive.PDC_sync) {
+////      delay(50);
+//      Serial.println("syncing..");
+////      for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
+////        DTDsend.sendSyncCode();
+////        delay(25);
+////      }
+////      irrecv.enableIRIn();
+//    } else {
+//      DTDreceive.printTransmission();
+//    }
+//    DTDreceive.resetVariables();
+//  }
   
   // check for RF transmission
-//  DTDRFreceive.checkRF();
-//  if(DTDRFreceive.transmission_complete) {
-//    // for now there is no sync procedure here
-//    DTDRFreceive.printTransmission();
-//    DTDRFreceive.resetVariables();
-//  }
+  DTDreceive.checkRF();
+  if(DTDreceive.transmission_complete) {
+    // for now there is no sync procedure here
+    DTDreceive.printTransmission();
+    DTDreceive.resetVariables();
+  }
     
 }
 
@@ -134,10 +124,10 @@ void checkLEDstate() {
     DTDreceive.resetVariables();
 //    DTDRFreceive.resetVariables();
   }
-  if((DTDreceive.IR_busy/* || DTDRFreceive.RF_busy*/) && digitalRead(greenLED)) {
+  if(DTDreceive.RF_busy && digitalRead(greenLED)) {
     digitalWrite(greenLED, LOW);
     digitalWrite(redLED, HIGH);
-  } else if(!(DTDreceive.IR_busy/* || DTDRFreceive.RF_busy*/) && digitalRead(redLED)) {
+  } else if(!DTDreceive.RF_busy && digitalRead(redLED)) {
     digitalWrite(greenLED, HIGH);
     digitalWrite(redLED, LOW);
   }

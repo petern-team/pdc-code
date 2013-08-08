@@ -15,6 +15,7 @@
 
 const int RECEIVEPIN = 9;
 const int RFTRANSMIT = 12;
+const int RFRECEIVE = 11;
 const int TRANSMIT_EN_PIN = 13;    // doesn't really do anything
 const int BUTTON = 2;
 const int SENSORPIN = A0;
@@ -37,7 +38,7 @@ int eeprom_stor_index;
 int eeprom_time_index;
 int data_val;
 
-boolean trans_complete;
+volatile boolean sampling;
 
 RFsend sensorSend;
 RFreceive sensorRecv;
@@ -83,17 +84,19 @@ void setup() {
   index = 0;
   eeprom_time_index = 0;
   eeprom_stor_index = STORAGE_START;
-  trans_complete = false;
+  sampling = true;            // start sampling as soon as it starts up
   overflow_1 = 0;
 //  irrecv.enableIRIn();
   
 // RF setup
    // Initialise the IO and ISR
     vw_set_tx_pin(RFTRANSMIT);
-    //  vw_set_rx_pin(receive_pin);
+    vw_set_rx_pin(RFRECEIVE);
     vw_set_ptt_pin(TRANSMIT_EN_PIN);
     //vw_set_ptt_inverted(true); // Required for DR3100
     vw_setup(2400);	 // Bits per sec
+    
+    vw_rx_start();
   
   // if samples are less than one a second report, hundredths of a second; if they're
   // taken b/t once a second and once every ten seconds report tenths of seconds;
@@ -111,25 +114,28 @@ void setup() {
 
 void loop() {
   // check if the docking station is trying to sync
-//    sensorRecv.checkIR(irrecv, results);
+    sensorRecv.checkRF();
     if(sensorRecv.transmission_complete) {
+      
       if(sensorRecv.PDC_sync) {
         Serial.println("syncing");
         DTDsync();
       }
+      sensorRecv.printTransmission();
+      sensorRecv.resetVariables();
     }
     
     // if the button has been pressed, send all collected data
     if(sync_button.pressed) {
       save_times();
       sync_button.pressed = false;
-      trans_complete = true;
+      sampling = false;
       sendData();
 //      testRF();
     }
     
     // every DATA_INTERVAL seconds/100 sample the selected sensor
-    if(!trans_complete && overflow_1 >= DATA_INTERVAL-1) {   
+    if(sampling && !sensorRecv.RF_busy && overflow_1 >= DATA_INTERVAL-1) {   
         overflow_1 = 0;
         time_stamps[index] = millis()/ DIVIDE_FACTOR;
 // BEGIN ULTRASOUND SENSOR CODE
@@ -181,7 +187,7 @@ void save_times() {
   for(int i=0;i<index;i++) {
     // stop sampling if eeprom is full
       if(eeprom_time_index == 250) {
-        trans_complete = true;
+        sampling = false;
         return;
       }
       EEPROM.write(eeprom_time_index*2, highByte(time_stamps[i]));
@@ -210,7 +216,7 @@ void sendData() {
   for(int i=0;i<eeprom_time_index;i++) {
     if(temp_index == MAXPAIRS) {
       sensorSend.createArray(trans_id, data_time_temp, temp_index);
-      sensorSend.sendArray(false);      // false tells the library not to send the EoT character
+      sensorSend.sendCondensedArray(false);      // false tells the library not to send the EoT character
 //      sensorSend.printTransmission();
       trans_id = 0;
       temp_index = 0;
@@ -223,7 +229,7 @@ void sendData() {
   }
   sensorSend.createArray(trans_id, data_time_temp, temp_index);
 //  sensorSend.printTransmission();
-  sensorSend.sendArray();
+  sensorSend.sendCondensedArray();
   Serial.println("done sending");
   waitForConfirm();
 }
@@ -233,14 +239,13 @@ void DTDsync() {
   unsigned int incoming_write[2][10] = {};
   bool quit = false;
   sensorSend.sendSyncCode();
-//  irrecv.enableIRIn();
   sensorRecv.resetVariables();
   while(!quit) {
-//    sensorRecv.checkIR(irrecv, results);
+    sensorRecv.checkRF();
     if(sensorRecv.transmission_complete) {
       // there was an error so ask for a resend
       if(!sensorRecv.parseTransmission(incoming_write)) {
-//        sensorSend.sendCommand(801);
+        sensorSend.sendCommand(801);
       } else {
         interpretCommand(sensorRecv.transmission_id, incoming_write, &quit);
       }
@@ -265,7 +270,7 @@ void waitForConfirm() {
 //  irrecv.enableIRIn();
   overflow_1 = 0;
   // wait 15 seconds
-  while(overflow_1 < 15000) {
+  while(overflow_1 < 1500) {
 //    sensorRecv.checkIR(irrecv, results);
     
     // if a confirm code is received (confirm = 7__) then reset variables and return.
@@ -308,6 +313,9 @@ void rise_funct()
 
 ISR(TIMER2_COMPA_vect) {
   overflow_1++;
+  if(vw_have_message()) {
+    sampling = false;
+  }
 }
 
 long microsecondsToInches(long microseconds)
@@ -331,7 +339,7 @@ long microsecondsToCentimeters(long microseconds)
 void resetStorage() {
   eeprom_time_index = 0;
   eeprom_stor_index = STORAGE_START;
-//  trans_complete = false;    // uncomment this to continue sampling after sending data
+//  sampling = true;    // uncomment this to continue sampling after sending data
   overflow_1 = 0;
 }
 

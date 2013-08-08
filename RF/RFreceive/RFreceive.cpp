@@ -21,26 +21,26 @@ RFreceive::RFreceive(long product) {
 void RFreceive::checkRF() {
     uint8_t buf[VW_MAX_MESSAGE_LEN];
     uint8_t buflen = VW_MAX_MESSAGE_LEN;
-    // Serial.println(VW_MAX_MESSAGE_LEN);
-    
-    //uint8_t buf[5];
-    //uint8_t buflen = 5;
     
     if (vw_get_message(buf, &buflen)) // Non-blocking
     {
         RF_busy = true;
         for (int i = 0; i < buflen; i++) {
-            //Serial.print(buf[i], HEX);
-            //Serial.write(buf[i]);
-            //Serial.print(buf[i]);
+//            Serial.write(buf[i]);
             storeData(buf[i]);
         }
-        //Serial.print("\n");
-        //        delay(1000);
-        //        digitalWrite(led_pin, LOW);
-        //        delay(1000);
     }
 }
+
+//volatile char RFreceive::checkRF() {
+//    char buf[VW_MAX_MESSAGE_LEN];
+//    
+//    // assume characters are sent one at a time
+//    if (vw_get_message(buf); {
+//        RF_busy = true;
+//        return buf[0];
+//    }
+//}
 
 //print the array when the end of transmission code is received
 void RFreceive::printTransmission() {
@@ -71,7 +71,7 @@ void RFreceive::storeData(char key) {
     index++;
     if(key == ':') {
         transmission_complete = true;
-        //        Serial.print("transmission[5]= "); Serial.println(transmissionArray[5]);
+        Serial.print("transmission last char: "); Serial.println(transmissionArray[index-1]);
         checkTransmission();
         return;
     }

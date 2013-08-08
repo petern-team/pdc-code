@@ -32,11 +32,12 @@ public:
     // all createArray functions take in a list of times and put them in a 2D array to be sent
     // to the docking station
     void createArray(int, unsigned int[][MAXPAIRS], int);
-    void createRFArray(int, unsigned int[][MAXPAIRS], int);
+//    void createRFArray(int, unsigned int[][MAXPAIRS], int);
     //    void createArray(long cat_time_array[][MAXPAIRS]);
     
     // send all of the times to the docking station using IR codes
-    void sendArray(bool last = true);
+//    void sendArray(bool last = true);
+    void sendCondensedArray(bool last = true);
     //    void sendRFArray(bool last = true);
     void sendCharArray(char char_arr[], int length);
     void sendSyncCode();
@@ -73,7 +74,9 @@ private:
     int checkIntLength(long);
     
     void writeColumn(int index, unsigned int data);
-    void sendColumn(int index);
+    void addColumn(int index, int*, char[]);
+//    void sendColumn(int index);
+    void sendCondensedColumn(char[], int*);
     void sendRFchar(char code);
     
     // called by create array to find the checksum number

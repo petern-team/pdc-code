@@ -33,7 +33,7 @@ void initAudioPin() {
   //  TCCR2B |= (1 << CS21);  // 8 prescaler
 //  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler timer 0
 //   TCCR2B |= (1 << CS22);    // timer2 64 prescaler
-  TCCR0B |= (1 << CS01) | (1 << CS00); // timer1 64 prescaler
+  TCCR0B |= (1 << CS01) | (1 << CS00); // timer0 64 prescaler
   //  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
 //  TCCR0B |= (1 << CS02) | (1 << CS00); // 1024 prescaler - not for timer2
   
@@ -63,7 +63,7 @@ void pinChange() {
     if(!bit_index) index++;  //bit_index was just reset so increment the array index
   }
    
-//  TCNT0 = 0;
+  TCNT0 = 0;
 }
 
 ISR(TIMER0_COMPA_vect) {

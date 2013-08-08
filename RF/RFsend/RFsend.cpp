@@ -125,6 +125,43 @@ void RFsend::sendArray(bool last) {
         sendRFchar(':');            // colon means end of transmission
 }
 
+// different version of sendArray that condenses 
+
+void RFsend::sendCondensedArray(bool last) {
+//    int length;
+    int column_index=0;
+    char msg[27];
+    int msg_index = 0;
+    
+    // first send the product ID, transmission ID, and checksum separated by commas and
+    // followed by a semicolon
+    
+    if(trans_id != 0) {
+        for(int i=0; i<3; i++) {
+            addColumn(i, &msg_index, msg);
+            if(i == 2) {            // send a semicolon or a comma after each number
+                msg[msg_index++] = ';';
+            } else {
+                msg[msg_index++] = ',';
+            }
+        }
+        column_index = 3;
+    }
+    // these nested for loops send the data pairs from the rest of transmissionArray
+    
+    for (int i=0; i<num_pairs; i++) {
+        addColumn(column_index++, &msg_index, msg);
+        msg[msg_index++] = ',';
+        addColumn(column_index++, &msg_index, msg);
+        msg[msg_index++] = ';';
+        if(msg_index > 14)
+            sendCondensedColumn(msg, &msg_index);
+    }
+    if(last)
+        msg[msg_index++] = ':';            // colon means end of transmission
+    sendCondensedColumn(msg, &msg_index);
+}
+
 
 // sendCharArray is meant to pass along a character array sent from the computer to
 // the PDC
@@ -133,11 +170,15 @@ void RFsend::sendArray(bool last) {
 
 void RFsend::sendCharArray(char char_arr[], int length) {
     long code;
+    char msg[VW_MAX_MESSAGE_LEN];
+    int msg_index = 0;
     for(int i=0;i<length;i++) {
-        code = char_arr[i];//convertCharToCode(char_arr[i]);
-        //        Serial.println(code);
-        sendRFchar(code);
+        msg[msg_index] = char_arr[i];
+        msg_index++;
+        if(msg_index == 26)
+            sendCondensedColumn(msg, &msg_index);
     }
+    sendCondensedColumn(msg, &msg_index);
 }
 
 // sendSyncCode sends the product_id followed by a colon. Devices will generally
@@ -146,14 +187,19 @@ void RFsend::sendCharArray(char char_arr[], int length) {
 void RFsend::sendSyncCode() {
     int ID_components[NUM_COMPS] = {0,0,0,0,0};
     breakItDown(my_id, ID_components);
+    char msg[6];
     
-    for(int i=4;i>=0;i--) {
-        sendRFchar(irKeyCodes[ID_components[i]]);
+    
+    for(int i=0;i<5;i++) {
+        msg[i] = ID_components[4-i];
+//        sendRFchar(irKeyCodes[ID_components[i]]);
         //        Serial.print(ID_components[i]);
     }
-    Serial.println();
+    msg[5] = ';';
+    vw_send((uint8_t *)msg, 6);
+//    Serial.println();
     //    Serial.println(irKeyCodes[12], HEX);
-    sendRFchar(':');
+//    sendRFchar(':');
 }
 
 // sendConfirm transforms a transmission id into a confirmation code and sends it to
@@ -213,6 +259,26 @@ void RFsend::sendColumn(int index) {
 }
 
 
+
+// add a column from transmission array to the char msg[] array about to be sent over RF
+
+void RFsend::addColumn(int index, int *msg_index, char msg[]) {
+    int length = transmissionArray[0][index]-'0';
+//    Serial.print("adding to "); Serial.print(*msg_index);
+    for(int i=length;i>=1;i--) {
+        msg[*msg_index] = transmissionArray[i][index];
+        (*msg_index)++;
+    }
+//    Serial.print("... "); Serial.print(*msg_index); Serial.println();
+}
+
+// send up to 27 codes that have been condensed into a string
+void RFsend::sendCondensedColumn(char msg[], int *msg_index) {
+//    Serial.print("sending: "); Serial.println(msg);
+    vw_send((uint8_t *)msg, *msg_index);
+    vw_wait_tx();
+    (*msg_index) = 0;
+}
 
 // RF?
 void RFsend::sendRFchar(char code) {

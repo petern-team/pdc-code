@@ -17,7 +17,7 @@ const int RECEIVEPIN = 9;
 const int BUTTON = 2;
 const int SENSORPIN = A0;
 const int ARR_SIZE = 10;
-const int TRANS_ID = 511;
+const int TRANS_ID = 512;
 const int STORAGE_START = 250;
 int PRODUCT_ID = 27301;     // BRD01, eventually add EEPROM saving and IR writing for this
 long DATA_INTERVAL = 50;   // send interval in seconds/100, add a way to save this in EEPROM
@@ -82,6 +82,7 @@ void setup() {
   eeprom_stor_index = STORAGE_START;
   trans_complete = false;
   overflow_10 = 0;
+  irrecv.enableIRIn();
   
   // if samples are less than one a second report, hundredths of a second; if they're
   // taken b/t once a second and once every ten seconds report tenths of seconds;
@@ -98,60 +99,65 @@ void setup() {
 }
 
 void loop() {
-  if(!trans_complete) {
-    if(sync_button.pressed) {
-      save_times();
-      IRsync();
-      trans_complete = true;
-    } else {
-      if(overflow_10 >= DATA_INTERVAL) {
-        
-// BEGIN ULTRASOUND SENSOR CODE
-        pinMode(SENSORPIN, OUTPUT);
-        digitalWrite(SENSORPIN, LOW);
-        delayMicroseconds(2);
-        digitalWrite(SENSORPIN, HIGH);
-        delayMicroseconds(5);
-        digitalWrite(SENSORPIN, LOW);
-      
-        // The same pin is used to read the signal from the PING))): a HIGH
-        // pulse whose duration is the time (in microseconds) from the sending
-        // of the ping to the reception of its echo off of an object.
-        pinMode(SENSORPIN, INPUT);
-        duration = pulseIn(SENSORPIN, HIGH);
-      
-        // convert the time into a distance, eventually adda way to choose the 
-        // measuring system (in. or cm)
-//        inches = microsecondsToInches(duration);
-        if(duration > 37000)
-          cm = -1;
-        else
-          cm = microsecondsToCentimeters(duration);
-        
-//        Serial.print(inches);
-//        Serial.print("in, ");
-        Serial.print(cm);
-        Serial.print("cm");
-        Serial.println();
-        data_val = cm;
-// END ULTRASOUND SENSOR, BEGIN LOUDNESS SENSOR CODE
-//        data_val = analogRead(SENSORPIN);
-//        Serial.println(data_val);
-// END LOUDNESS SENSOR, BEGIN STORAGE CODE
-        storage[index] = data_val;
-        time_stamps[index] = millis()/ DIVIDE_FACTOR;
-        index++;
-        
-        overflow_10 = 0;
-      }
+  sensorRecv.checkIR(irrecv, results);
+  if(sensorRecv.transmission_complete) {
+      sensorRecv.printTransmission();
+      sensorRecv.resetVariables();
     }
-    
-    // if arduino is running out of room store the collected values in EEPROM
-    // 
-    if(index == ARR_SIZE-1) {
-      save_times();
-    }
-  }
+//  if(!trans_complete) {
+//    if(sync_button.pressed) {
+//      save_times();
+//      IRsync();
+//      trans_complete = true;
+//    } else {
+//      if(overflow_10 >= DATA_INTERVAL) {
+//        
+//// BEGIN ULTRASOUND SENSOR CODE
+//        pinMode(SENSORPIN, OUTPUT);
+//        digitalWrite(SENSORPIN, LOW);
+//        delayMicroseconds(2);
+//        digitalWrite(SENSORPIN, HIGH);
+//        delayMicroseconds(5);
+//        digitalWrite(SENSORPIN, LOW);
+//      
+//        // The same pin is used to read the signal from the PING))): a HIGH
+//        // pulse whose duration is the time (in microseconds) from the sending
+//        // of the ping to the reception of its echo off of an object.
+//        pinMode(SENSORPIN, INPUT);
+//        duration = pulseIn(SENSORPIN, HIGH);
+//      
+//        // convert the time into a distance, eventually adda way to choose the 
+//        // measuring system (in. or cm)
+////        inches = microsecondsToInches(duration);
+//        if(duration > 37000)
+//          cm = -1;
+//        else
+//          cm = microsecondsToCentimeters(duration);
+//        
+////        Serial.print(inches);
+////        Serial.print("in, ");
+//        Serial.print(cm);
+//        Serial.print("cm");
+//        Serial.println();
+//        data_val = cm;
+//// END ULTRASOUND SENSOR, BEGIN LOUDNESS SENSOR CODE
+////        data_val = analogRead(SENSORPIN);
+////        Serial.println(data_val);
+//// END LOUDNESS SENSOR, BEGIN STORAGE CODE
+//        storage[index] = data_val;
+//        time_stamps[index] = millis()/ DIVIDE_FACTOR;
+//        index++;
+//        
+//        overflow_10 = 0;
+//      }
+//    }
+//    
+//    // if arduino is running out of room store the collected values in EEPROM
+//    // 
+//    if(index == ARR_SIZE-1) {
+//      save_times();
+//    }
+//  }
 }
 
 // save 

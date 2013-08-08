@@ -5,7 +5,7 @@
 
 const int led_pin = 2;
 //const int transmit_pin = 12;
-const int receive_pin = 13;
+const int receive_pin = 11;
 const int transmit_en_pin = 4;
 
 void setup()
@@ -13,7 +13,7 @@ void setup()
     delay(1000);
     Serial.begin(9600);	// Debugging only
     Serial.println("setup");
-    pinMode(led_pin, OUTPUT);
+//    pinMode(led_pin, OUTPUT);
 
     // Initialise the IO and ISR
     //vw_set_tx_pin(transmit_pin);
@@ -36,7 +36,7 @@ void loop()
 
     if (vw_get_message(buf, &buflen)) // Non-blocking
     {
-        digitalWrite(led_pin, HIGH); // Flash a light to show received good message
+//        digitalWrite(led_pin, HIGH); // Flash a light to show received good message
         // Message with a good checksum received, print it.
         Serial.print("\n Got: ");
 

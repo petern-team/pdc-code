@@ -20,6 +20,7 @@ public:
     
     //    void checkIR(IRrecv, decode_results);
     void checkRF();
+//    volatile char checkRFchar();
     void printTransmission();
     void resetVariables();
     char getChar(int index);
@@ -27,7 +28,7 @@ public:
     
     static const int RECEIVEPIN = 9;
     int PRODUCT_ID;
-    bool RF_busy;
+    volatile bool RF_busy;
     bool transmission_complete;
     bool PDC_sync;
 //    bool command_query;
