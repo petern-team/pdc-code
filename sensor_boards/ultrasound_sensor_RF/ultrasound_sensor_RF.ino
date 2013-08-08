@@ -22,9 +22,15 @@ const int SENSORPIN = A0;
 const int ARR_SIZE = 10;
 const int LOUD_TRANS_ID = 511;
 const int ULTSND_TRANS_ID = 512;
-const int STORAGE_START = 250;
-int PRODUCT_ID = 27301;     // BRD01, eventually add EEPROM saving and IR writing for this
-long DATA_INTERVAL = 500;   // send interval in milliseconds, add a way to save this in EEPROM
+const int STORAGE_START = 200;
+const int ID_ADRS = 900;
+const int SENS_ADRS = 903;
+const int DATA_INT_ADRS = 906;
+
+byte SENSOR_TYPE;        // initializes as ultrasound sensor
+int PRODUCT_ID;     // BRD01, eventually add EEPROM saving and IR writing for this
+unsigned int DATA_INTERVAL;   // send interval in milliseconds, add a way to save this in EEPROM
+                              // sampling rate must be between 100hz and 1 per minute
 int DIVIDE_FACTOR;          // number to divide millis() by for time stamps.
 volatile long overflow_1;
 
@@ -49,8 +55,12 @@ RFreceive sensorRecv;
 button sync_button(0);
 
 void setup() {
-  sensorSend.my_id = PRODUCT_ID;
   Serial.begin(9600);
+  
+  // load the stored product ID, sensor type, and sampling rate
+  loadOldInfo(ID_ADRS);
+  loadOldInfo(SENS_ADRS);
+  loadOldInfo(DATA_INT_ADRS);
   
   // set a timer interrupt to happen every millisecond (fastest sampling rate allowed for sensor)
   
@@ -86,7 +96,7 @@ void setup() {
   eeprom_stor_index = STORAGE_START;
   sampling = true;            // start sampling as soon as it starts up
   overflow_1 = 0;
-//  irrecv.enableIRIn();
+  setDivideFactor();
   
 // RF setup
    // Initialise the IO and ISR
@@ -97,16 +107,6 @@ void setup() {
     vw_setup(2400);	 // Bits per sec
     
     vw_rx_start();
-  
-  // if samples are less than one a second report, hundredths of a second; if they're
-  // taken b/t once a second and once every ten seconds report tenths of seconds;
-  // otherwise only report seconds
-  if(DATA_INTERVAL < 1000) 
-    DIVIDE_FACTOR = 10;
-  else if(DATA_INTERVAL < 10000)
-    DIVIDE_FACTOR = 100;
-  else 
-    DIVIDE_FACTOR = 1000;
   
   Serial.print("free memory: ");
   Serial.println(freeMemory());
@@ -138,38 +138,44 @@ void loop() {
     if(sampling && !sensorRecv.RF_busy && overflow_1 >= DATA_INTERVAL-1) {   
         overflow_1 = 0;
         time_stamps[index] = millis()/ DIVIDE_FACTOR;
-// BEGIN ULTRASOUND SENSOR CODE
-        pinMode(SENSORPIN, OUTPUT);
-        digitalWrite(SENSORPIN, LOW);
-        delayMicroseconds(2);
-        digitalWrite(SENSORPIN, HIGH);
-        delayMicroseconds(5);
-        digitalWrite(SENSORPIN, LOW);
-      
-        // The same pin is used to read the signal from the PING))): a HIGH
-        // pulse whose duration is the time (in microseconds) from the sending
-        // of the ping to the reception of its echo off of an object.
-        pinMode(SENSORPIN, INPUT);
-        duration = pulseIn(SENSORPIN, HIGH);
-      
-        // convert the time into a distance, eventually adda way to choose the 
-        // measuring system (in. or cm)
-//        inches = microsecondsToInches(duration);
-        if(duration > 37000)
-          cm = -1;
-        else
-          cm = microsecondsToCentimeters(duration);
         
-//        Serial.print(inches);
-//        Serial.print("in, ");
-        Serial.print(cm);
-        Serial.print("cm");
-        Serial.println();
-        data_val = cm;
-// END ULTRASOUND SENSOR, BEGIN LOUDNESS SENSOR CODE
-//        data_val = analogRead(SENSORPIN);
-//        Serial.println(data_val);
-// END LOUDNESS SENSOR, BEGIN STORAGE CODE
+        // choose which sensor code to run depending on the sensor type
+        switch(SENSOR_TYPE) {
+          case 1:
+            // BEGIN LOUDNESS SENSOR CODE
+            data_val = analogRead(SENSORPIN);
+            Serial.println(data_val);
+            break;
+          // BEGIN ULTRASOUND SENSOR CODE
+          case 2:
+            pinMode(SENSORPIN, OUTPUT);
+            digitalWrite(SENSORPIN, LOW);
+            delayMicroseconds(2);
+            digitalWrite(SENSORPIN, HIGH);
+            delayMicroseconds(5);
+            digitalWrite(SENSORPIN, LOW);
+          
+            // The same pin is used to read the signal from the PING))): a HIGH
+            // pulse whose duration is the time (in microseconds) from the sending
+            // of the ping to the reception of its echo off of an object.
+            pinMode(SENSORPIN, INPUT);
+            duration = pulseIn(SENSORPIN, HIGH);
+          
+            // convert the time into a distance, eventually adda way to choose the 
+            // measuring system (in. or cm)
+    //        inches = microsecondsToInches(duration);
+            if(duration > 37000)
+              cm = -1;
+            else
+              data_val = microsecondsToCentimeters(duration);
+            
+    //        Serial.print(inches);
+    //        Serial.println("in, ");
+            Serial.print(data_val);
+            Serial.println("cm");
+            break;
+        }
+
         storage[index] = data_val;
         index++;
         
@@ -245,10 +251,13 @@ void DTDsync() {
     if(sensorRecv.transmission_complete) {
       // there was an error so ask for a resend
       if(!sensorRecv.parseTransmission(incoming_write)) {
-        sensorSend.sendCommand(801);
+        Serial.println("sending resend code");
+        sensorSend.sendCommand(810);
       } else {
         interpretCommand(sensorRecv.transmission_id, incoming_write, &quit);
       }
+      sensorRecv.resetVariables();
+      memset(incoming_write, 0, sizeof(incoming_write));
     }
   }
 }
@@ -257,9 +266,47 @@ void DTDsync() {
 // on its content
 void interpretCommand(int incoming_id, unsigned int incoming_write[][10], bool *quit) {
   short command_cat = incoming_id/100;
-//  switch(command_cat) {
-//    case
+  Serial.print("interpret command with "); Serial.println(incoming_id);
+ 
+  // interpret the command, take action, and reply to the DTD. when sendCommand includes true
+  // that means it's sending a confirmation of whatever event just took place
+  switch(command_cat) {
+    
+    // all commands that involve changing things on the sensor board are case 3
+    case 3:
+      if(incoming_id == 311) {
+        Serial.println("setting product id");
+        // product id is always stored in address 900 and 901
+        loadNewInfo(incoming_write[0][0], ID_ADRS);
+        sensorSend.sendCommand(incoming_id, true);
+      } else if(incoming_id == 312) {
+        Serial.println("setting sensor type");
+        // sensorType is stored in address 902 and 903
+        loadNewInfo(incoming_write[0][0], SENS_ADRS);
+        sensorSend.sendCommand(incoming_id, true);
+      } else if(incoming_id == 313) {
+        Serial.println("setting sampling rate");
+        loadNewInfo(incoming_write[0][0], DATA_INT_ADRS);
+        sensorSend.sendCommand(incoming_id, true);
+      }
+      break;
+    // for now only contains the quit command
+    case 9:
+//      if(incoming_id == 911) {      // uncomment when/ if there are more commands to consider
+        *quit = true;
+        break;
+//      }
+  }
+        
 }
+
+// loadSensorType takes an value stored in [0][0] of incoming_write and translates it to
+// a sensor type. Depending on the sensor type, the code in loop() will undertake
+// the appropriate sampling procedure
+
+//void loadSensorType(int type) {
+//  
+//}
 
 // wait for the DTD to either request a resend or confirm that codes were received (this
 // step should be automated by the web interface)
@@ -303,6 +350,58 @@ void waitForConfirm() {
 //                                      UTILITIES
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+// loadOldInfo handles loading saved settings at the start of the program
+
+void loadOldInfo(int address) {
+  bool good_val = EEPROM.read(address++);
+  Serial.print(address-1); Serial.print(", "); Serial.println(EEPROM.read(address-1));
+  
+   // a value of true will be saved in this address if the value has been set
+  if(address == ID_ADRS+1) {
+    PRODUCT_ID = word(EEPROM.read(address++), EEPROM.read(address));
+    if(!good_val || PRODUCT_ID/27300 != 1) {
+      PRODUCT_ID = 27300;
+    }
+    sensorSend.my_id = PRODUCT_ID;
+    Serial.println("using product id: "); Serial.println(PRODUCT_ID);
+  } else if(address == SENS_ADRS+1) {
+    SENSOR_TYPE = word(EEPROM.read(address++), EEPROM.read(address));
+    
+    // change this as we add more sensors
+    if(!good_val || SENSOR_TYPE > 2) {
+      SENSOR_TYPE = 1;
+    }
+    Serial.println("using sensor: "); Serial.println(SENSOR_TYPE);
+  } else if(address == DATA_INT_ADRS+1) {
+    DATA_INTERVAL = word(EEPROM.read(address++), EEPROM.read(address));
+
+    if(!good_val || (DATA_INTERVAL < 10 || DATA_INTERVAL > 60000)) {
+      DATA_INTERVAL = 1000;
+    }
+    Serial.println("using sample rate: "); Serial.println(DATA_INTERVAL);
+  }
+}
+
+// LoadNewInfo handles loading new product information and settings into the sensor's memory
+
+void loadNewInfo(unsigned int new_info, int address) {
+  Serial.print("saving id "); Serial.println(new_info);
+//  if(address == ID_ADRS) {
+//    PRODUCT_ID = new_info;
+//    sensorSend.my_id = new_info;
+//  } else if(address == SENS_ADRS) {
+//    SENSOR_TYPE = new_info;
+//  } else if(address = DATA_INT_ADRS) {
+//    DATA_INTERVAL = new_info;
+//  }
+  EEPROM.write(address++, true);
+  Serial.print(address-1); Serial.print(", "); Serial.println(EEPROM.read(address-1));
+  EEPROM.write(address++, highByte(new_info));
+  EEPROM.write(address, lowByte(new_info));
+  // make sure all settings are up to date
+  loadOldInfo(address-2);
+}
+
 //the interrupt service routine. Calls the rise function in the button1 class and tells
 // the teensy to send new values next time through loop
 void rise_funct()
@@ -316,6 +415,18 @@ ISR(TIMER2_COMPA_vect) {
   if(vw_have_message()) {
     sampling = false;
   }
+}
+
+void setDivideFactor() {
+  // if samples are less than one a second report, hundredths of a second; if they're
+  // taken b/t once a second and once every ten seconds report tenths of seconds;
+  // otherwise only report seconds
+  if(DATA_INTERVAL < 1000) 
+    DIVIDE_FACTOR = 10;
+  else if(DATA_INTERVAL < 10000)
+    DIVIDE_FACTOR = 100;
+  else 
+    DIVIDE_FACTOR = 1000;
 }
 
 long microsecondsToInches(long microseconds)

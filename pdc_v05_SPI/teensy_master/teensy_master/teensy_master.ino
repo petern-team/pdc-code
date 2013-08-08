@@ -322,13 +322,14 @@ boolean interpretCommand(int incoming_id, unsigned int incoming_write[][10]) {
         sendSPIdata(51);
         loadTimes(incoming_write);
         
-        // this will be handled by the computer
-        pdcSend.sendCommand(incoming_id);
+        // this will be handled by the computer, true means that it's a confirm code
+        // and not a command
+        pdcSend.sendCommand(incoming_id, true);
       } else if(incoming_id == 302) {
         Serial.println("loading new id");
         sendSPIdata(52);
         loadProductId(incoming_write);
-        pdcSend.sendCommand(incoming_id);
+        pdcSend.sendCommand(incoming_id, true);
       }
       break;
     // for now case 9 only contains the quit command

@@ -71,7 +71,7 @@ void RFreceive::storeData(char key) {
     index++;
     if(key == ':') {
         transmission_complete = true;
-        Serial.print("transmission last char: "); Serial.println(transmissionArray[index-1]);
+//        Serial.print("transmission last char: "); Serial.println(transmissionArray[index-1]);
         checkTransmission();
         return;
     }

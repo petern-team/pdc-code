@@ -93,39 +93,8 @@ void RFsend::createArray(int outgoing_id, unsigned int data_time_arr[][MAXPAIRS]
     }
 }
 
-// this functions sends the IR codes stored in transmissionArray to the docking station
-// 8/5/13 added the last qualifier(?). let's see how this works out
-void RFsend::sendArray(bool last) {
-    int length;
-    int column_index=0;
-    
-    // first send the product ID, transmission ID, and checksum separated by commas and
-    // followed by a semicolon
-    
-    if(trans_id != 0) {
-        for(int i=0; i<3; i++) {
-            sendColumn(i);
-            if(i == 2) {            // send a semicolon or a comma after each number
-                sendRFchar(';');
-            } else {
-                sendRFchar(',');
-            }
-        }
-        column_index = 3;
-    }
-    // these nested for loops send the data pairs from the rest of transmissionArray
-    
-    for (int i=0; i<num_pairs; i++) {
-        sendColumn(column_index++);
-        sendRFchar(',');
-        sendColumn(column_index++);
-        sendRFchar(';');
-    }
-    if(last)
-        sendRFchar(':');            // colon means end of transmission
-}
-
-// different version of sendArray that condenses 
+// different version of sendArray that condenses the transmissionArray into character arrays of up to 27
+// characters and sends those one at a time
 
 void RFsend::sendCondensedArray(bool last) {
 //    int length;
@@ -166,8 +135,6 @@ void RFsend::sendCondensedArray(bool last) {
 // sendCharArray is meant to pass along a character array sent from the computer to
 // the PDC
 
-// so far has NOT been tested
-
 void RFsend::sendCharArray(char char_arr[], int length) {
     long code;
     char msg[VW_MAX_MESSAGE_LEN];
@@ -187,16 +154,17 @@ void RFsend::sendCharArray(char char_arr[], int length) {
 void RFsend::sendSyncCode() {
     int ID_components[NUM_COMPS] = {0,0,0,0,0};
     breakItDown(my_id, ID_components);
+    int arr_size = 6;
     char msg[6];
     
     
     for(int i=0;i<5;i++) {
-        msg[i] = ID_components[4-i];
+        msg[i] = ID_components[4-i]+'0';
 //        sendRFchar(irKeyCodes[ID_components[i]]);
         //        Serial.print(ID_components[i]);
     }
-    msg[5] = ';';
-    vw_send((uint8_t *)msg, 6);
+    msg[5] = ':';
+    sendCondensedColumn(msg, &arr_size);
 //    Serial.println();
     //    Serial.println(irKeyCodes[12], HEX);
 //    sendRFchar(':');
@@ -205,10 +173,11 @@ void RFsend::sendSyncCode() {
 // sendConfirm transforms a transmission id into a confirmation code and sends it to
 // the DTD
 
-void RFsend::sendCommand(int trans_id) {
+void RFsend::sendCommand(int trans_id, bool confirm) {
     int product_id_arr[NUM_COMPS];
     int trans_id_arr[3];
-    trans_id = trans_id%100 + 700;
+    if (confirm)
+        trans_id = trans_id%100 + 700;
     
     breakItDown(my_id, product_id_arr);
     for(int i=4;i>=0;i--) {
@@ -245,20 +214,6 @@ void RFsend::writeColumn(int index, unsigned int data) {
         //        Serial.println(transmissionArray[i][index]);
     }
 }
-
-// sendColumn takes a column index as an argument and send the numbers in that column
-// using the sendSony IR protocol
-
-void RFsend::sendColumn(int index) {
-    int length = transmissionArray[0][index]-'0';
-    //    Serial.print("send length: "); Serial.println(length);
-    for(int i=length;i>=1;i--) {
-        //        Serial.println(transmissionArray[i][index]);
-        sendRFchar(transmissionArray[i][index]);
-    }
-}
-
-
 
 // add a column from transmission array to the char msg[] array about to be sent over RF
 

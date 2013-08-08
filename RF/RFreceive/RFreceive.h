@@ -31,8 +31,6 @@ public:
     volatile bool RF_busy;
     bool transmission_complete;
     bool PDC_sync;
-//    bool command_query;
-//    bool command_write;
     int transmission_id;
     
 private:
