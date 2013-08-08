@@ -21,7 +21,11 @@ const int RFTRANSMIT = 12;
 const int TRANSMIT_EN_PIN = 4;
 
 char comp_char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy
+char last_send[(ARR_SIZE*2)/5];
+unsigned int incoming_write[2][10];
 int char_index;
+int last_send_len;
+int incoming_id;
 
 
 //PDCreceive DTDreceive;
@@ -60,6 +64,7 @@ void setup() {
   
   // initialize sketch variables
   char_index = 0;
+  incoming_id = 0;
   Serial.print("free memory: ");
   Serial.println(freeMemory());
 }
@@ -85,33 +90,34 @@ void loop() {
     checkLEDstate();
     
     DTDsend.sendCharArray(comp_char_arr, char_index);      // TEST THIS
+    saveLastSend(comp_char_arr, char_index);
     resetStorage();
     resetChars();
     DTDreceive.RF_busy = false;
 //    irrecv.enableIRIn();
   }
   
-  // check for IR transmission
-//  DTDreceive.checkIR(irrecv, results); 
-//  if(DTDreceive.transmission_complete) {
-//    if(DTDreceive.PDC_sync) {
-////      delay(50);
-//      Serial.println("syncing..");
-////      for(int i=0;i<1;i++) {                // change this if PDC has trouble receiving the first code
-////        DTDsend.sendSyncCode();
-////        delay(25);
-////      }
-////      irrecv.enableIRIn();
-//    } else {
-//      DTDreceive.printTransmission();
-//    }
-//    DTDreceive.resetVariables();
-//  }
-  
   // check for RF transmission
   DTDreceive.checkRF();
   if(DTDreceive.transmission_complete) {
+    Serial.println("transmission complete");
+    if(DTDreceive.PDC_sync) {
+      Serial.println("sending sync code");
+      DTDsend.sendSyncCode();
+    }
     // for now there is no sync procedure here
+    
+    // eventually add a way such as this to automatically resend transmissions
+//    if(DTDreceive.parseTransmission(incoming_write) && DTDreceive.transmission_id == 800)
+//      DTDsend.sendCharArray(last_send, last_send_len);
+    // automatically send confirmation
+//    if(DTDreceive.parseTransmission(incoming_write)) {
+//      incoming_id = DTDreceive.transmission_id;
+//    }
+//    if(incoming_id > 500 && incoming_id < 600) {
+//      DTDsend.sendCommand(incoming_id, true);
+//      incoming_id = 0;
+//    }
     DTDreceive.printTransmission();
     DTDreceive.resetVariables();
   }
@@ -139,6 +145,15 @@ void resetChars() {
   }
   char_index = 0;
 }  
+
+// save the last character array sent in case a device asks for a resend
+
+void saveLastSend(char char_arr[], int index) {
+  for(int i=0;i<index;i++) {
+    last_send[i]=char_arr[i];
+  }
+  last_send_len = index;
+}
 
 //counts the number of characters in transmissionArray, plus commas and semicolons
 

@@ -74,7 +74,6 @@ void RFsend::createArray(int outgoing_id, unsigned int data_time_arr[][MAXPAIRS]
     
     // first write the triplet of product id, transmission id, checksum
     if(trans_id != 0) {
-        Serial.print("calling writecolumn with product_id: "); Serial.println(my_id);
         writeColumn(0, my_id);
         writeColumn(1, trans_id);
         checksum = findCheckSum(data_time_arr[0], length)+findCheckSum(data_time_arr[1], length);

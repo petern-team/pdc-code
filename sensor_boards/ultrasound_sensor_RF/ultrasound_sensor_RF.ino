@@ -18,6 +18,7 @@ const int RFTRANSMIT = 12;
 const int RFRECEIVE = 11;
 const int TRANSMIT_EN_PIN = 13;    // doesn't really do anything
 const int BUTTON = 2;
+const int LEDPIN = 7;
 const int SENSORPIN = A0;
 const int ARR_SIZE = 10;
 const int LOUD_TRANS_ID = 511;
@@ -34,7 +35,7 @@ unsigned int DATA_INTERVAL;   // send interval in milliseconds, add a way to sav
 int DIVIDE_FACTOR;          // number to divide millis() by for time stamps.
 volatile long overflow_1;
 
-long duration, inches, cm;
+long duration;//, inches, cm;
 
 // initialize to all zeros
 unsigned int storage[ARR_SIZE] = {};
@@ -45,6 +46,7 @@ int eeprom_time_index;
 int data_val;
 
 volatile boolean sampling;
+boolean codes_to_send;
 
 RFsend sensorSend;
 RFreceive sensorRecv;
@@ -87,15 +89,19 @@ void setup() {
   sei();
   
   attachInterrupt(sync_button.interrupt_pin, rise_funct, RISING);
-
+  pinMode(LEDPIN, OUTPUT);
+  
   // each index is 1 int (2 bytes)
   // index 0 stores the divide_factor, time stamps start at index 1 and stored values start
   // at index 251
   index = 0;
   eeprom_time_index = 0;
   eeprom_stor_index = STORAGE_START;
-  sampling = true;            // start sampling as soon as it starts up
+  sampling = false;            // don't start sampling as soon as it starts up
+  codes_to_send = false;
   overflow_1 = 0;
+  sync_button.pressed = true;
+  
   setDivideFactor();
   
 // RF setup
@@ -126,16 +132,18 @@ void loop() {
     }
     
     // if the button has been pressed, send all collected data
-    if(sync_button.pressed) {
+    if(sync_button.pressed && codes_to_send) {
       save_times();
-      sync_button.pressed = false;
+//      sync_button.pressed = false;
       sampling = false;
       sendData();
+      codes_to_send = false;
 //      testRF();
     }
     
     // every DATA_INTERVAL seconds/100 sample the selected sensor
-    if(sampling && !sensorRecv.RF_busy && overflow_1 >= DATA_INTERVAL-1) {   
+    if(!sync_button.pressed && !sensorRecv.RF_busy && overflow_1 >= DATA_INTERVAL-1) { 
+        codes_to_send = true;  
         overflow_1 = 0;
         time_stamps[index] = millis()/ DIVIDE_FACTOR;
         
@@ -165,7 +173,7 @@ void loop() {
             // measuring system (in. or cm)
     //        inches = microsecondsToInches(duration);
             if(duration > 37000)
-              cm = -1;
+              data_val = -1;
             else
               data_val = microsecondsToCentimeters(duration);
             
@@ -175,17 +183,21 @@ void loop() {
             Serial.println("cm");
             break;
         }
-
         storage[index] = data_val;
         index++;
-        
-        
       }
 
     // if the arrays are running out of room store the collected values in EEPROM
     if(index == ARR_SIZE-1) {
       save_times();
     }
+    
+    if(!sync_button.pressed && overflow_1/10 == 0)
+      digitalWrite(LEDPIN, HIGH);
+    else if(!sync_button.pressed && overflow_1/10 == DATA_INTERVAL/20)
+      digitalWrite(LEDPIN, LOW);
+    else if(sync_button.pressed)
+      digitalWrite(LEDPIN, HIGH);
 }
 
 // save the collected data into eeprom
@@ -208,7 +220,20 @@ void save_times() {
 
 // send all of the collected data to the docking station in arrays of size MAXPAIRS
 void sendData() {
-//  sensorSend.sendArray();
+  
+  // make sure a DTD is in range and listening before sending data
+  sensorSend.sendSyncCode();
+  overflow_1 = 0;
+  while(overflow_1 < 500) {
+    sensorRecv.checkRF();
+  }
+  if(!sensorRecv.PDC_sync) {
+    sampling = true;
+    Serial.println("no DTD found");
+    return;
+  }
+  sensorRecv.resetVariables();
+    
 //  long start_send = micros();
 //  Serial.print((micros()-start_send)/1000); Serial.println(" millis to create array for first 30");
   unsigned int data_time_temp[2][MAXPAIRS] = {};
@@ -252,7 +277,7 @@ void DTDsync() {
       // there was an error so ask for a resend
       if(!sensorRecv.parseTransmission(incoming_write)) {
         Serial.println("sending resend code");
-        sensorSend.sendCommand(810);
+        sensorSend.sendCommand(800);
       } else {
         interpretCommand(sensorRecv.transmission_id, incoming_write, &quit);
       }
@@ -310,15 +335,15 @@ void interpretCommand(int incoming_id, unsigned int incoming_write[][10], bool *
 
 // wait for the DTD to either request a resend or confirm that codes were received (this
 // step should be automated by the web interface)
-// if not code is received this function will return to loop without resetting storage
+// if no code is received this function will return to loop without resetting storage
 void waitForConfirm() {
   unsigned int incoming_write[2][10] = {};
   // check if the DTD wants a resend of the codes, otherwise clear the stored data
 //  irrecv.enableIRIn();
   overflow_1 = 0;
   // wait 15 seconds
-  while(overflow_1 < 1500) {
-//    sensorRecv.checkIR(irrecv, results);
+  while(overflow_1 < 15000) {
+    sensorRecv.checkRF();
     
     // if a confirm code is received (confirm = 7__) then reset variables and return.
     // if a resend code is received (8__) then the function calls itself

@@ -139,7 +139,7 @@ bool RFreceive::parseTransmission(unsigned int write_array[][10]) {
         transmission_id += transmissionArray[chk_indx]-'0';
         //        Serial.print("transmission ID: "); Serial.println(transmission_id);
     }
-    Serial.print("transmission ID: "); Serial.println(transmission_id);
+//    Serial.print("transmission ID: "); Serial.println(transmission_id);
     
     if(transmissionArray[9] == ':') {
 //        command_query = true;
