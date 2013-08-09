@@ -100,7 +100,7 @@ void loop() {
   // check for RF transmission
   DTDreceive.checkRF();
   if(DTDreceive.transmission_complete) {
-    Serial.println("transmission complete");
+//    Serial.println("transmission complete");
     if(DTDreceive.PDC_sync) {
       Serial.println("sending sync code");
       DTDsend.sendSyncCode();

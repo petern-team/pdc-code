@@ -3,7 +3,7 @@
 #include <VirtualWire.h>
 
 const int led_pin = 13;
-const int transmit_pin = 12;
+const int transmit_pin = 9;
 //const int receive_pin = 2;
 const int transmit_en_pin = 3;
 const int pwmPin = 5;
@@ -41,7 +41,7 @@ void loop()
     //msg[6] = count;
 //    digitalWrite(led_pin, HIGH); // Flash a light to show transmitting
     Serial.println("sending...");
-    vw_send((uint8_t *)msg, 26);
+    vw_send((uint8_t *)msg, 27);
     vw_wait_tx(); // Wait until the whole message is gone
 //    digitalWrite(led_pin, LOW);
     delay(1000);
