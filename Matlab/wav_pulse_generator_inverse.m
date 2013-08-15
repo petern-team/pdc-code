@@ -8,7 +8,7 @@ pulses_per_file = 20;
 pts_per_period = 8;
 
 %Arduino will read periods_per_pulse/4 values per pulse at rate 51200
-periods_per_pulse = 16;%116;%232;%464;   
+periods_per_pulse = 32;%116;%232;%464;   
 
 % length of each pulse is pts_per_pulse/rate = periods_per_pulse/frequency
 pts_per_pulse = pts_per_period*periods_per_pulse;

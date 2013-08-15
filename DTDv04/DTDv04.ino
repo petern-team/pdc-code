@@ -45,6 +45,11 @@ void setup() {
   char_index = 0;
   Serial.print("free memory: ");
   Serial.println(freeMemory());
+//  for(int i=0;i<30;i++) {
+//    Serial.println("sending");
+//    DTDsend.sendSyncCode();
+//    delay(1000);
+//  }
 }
 
 

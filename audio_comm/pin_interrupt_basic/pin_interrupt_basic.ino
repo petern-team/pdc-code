@@ -3,7 +3,9 @@ int timeOfLast;
 int pos;
 byte the_byte;
 volatile byte num_zeros;
+volatile bool the_bit;
 const int ARR_SIZE = 400;
+const int BUTTON = 7;
 volatile int changes;
 //volatile int capture_changes;
 volatile byte index;
@@ -14,7 +16,7 @@ volatile byte storage_arr[ARR_SIZE];
 void setup() {
   Serial.begin(9600);
   
-  pinMode(6, INPUT);
+  pinMode(BUTTON, INPUT);
   num_zeros = 0;
   index = 0;
   the_byte = 0;
@@ -53,14 +55,14 @@ void setup() {
 //  TIMSK1 =  _BV(ICIE1);                         // enable input capture interrupt for timer 1
 
 sei();
-attachInterrupt(7,pinChange,CHANGE);
+attachInterrupt(6,pinChange,CHANGE);
 Serial.println("exiting setup");
 
 }
 
 void loop() {
 
-  if(digitalRead(6) && changes > 10 || changes > 3100) {
+  if(digitalRead(BUTTON) && changes > 10 || changes > 3100) {
     ref_index = index;
     index = 0;
     Serial.print(changes); Serial.print(", "); Serial.print(ref_index); Serial.print(": ");
@@ -103,10 +105,10 @@ void loop() {
 ISR(TIMER1_COMPA_vect) {
 // if one of the last four pulses was true or current transmission is true 
 //  if(!(byte_index > 6 && storage_arr[index] == 0) || (PINB & B0000001)){  
-  if((PIND & (1 << 2)) || num_zeros < 120) {
-    storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 2))>>2);
+  if((PIND & (1 << 1)) || num_zeros < 120) {
+    storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 1))>>1);
     // increment byte_index and make sure its less than 8
-    if(PIND & (1 << 2))
+    if(PIND & (1 << 1))
       num_zeros=0;
     else
       num_zeros++;
@@ -118,7 +120,7 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 void pinChange() {
-  storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 2))>>2);
+  storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 1))>>1);
 //   if(PIND & B0000100)
 //     one_changes++;
 //   else
