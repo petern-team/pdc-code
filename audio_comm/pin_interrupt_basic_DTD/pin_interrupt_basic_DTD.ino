@@ -9,6 +9,7 @@ volatile int changes;
 volatile byte index;
 int ref_index;
 volatile byte byte_index;
+volatile bool the_bit;
 volatile byte storage_arr[ARR_SIZE];
 
 void setup() {
@@ -101,6 +102,7 @@ void loop() {
 }
 
 ISR(TIMER1_COMPA_vect) {
+  the_bit = PIND & (1 << 1);
 // if one of the last four pulses was true or current transmission is true 
 //  if(!(byte_index > 6 && storage_arr[index] == 0) || (PINB & B0000001)){  
   if(!(PIND & (1 << 1)) || num_ones < 120) {
@@ -117,19 +119,19 @@ ISR(TIMER1_COMPA_vect) {
   }
 }
 
-//void pinChange() {
-//  storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 1)) >> 1);
-////   if(PIND & B0000100)
-////     one_changes++;
-////   else
-////     zero_changes++;
-// num_ones = 0;
-// changes++;
-//    
-//  // increment bit_index and make sure its <= 8
-//  byte_index++; 
-//  byte_index &= B111; 
-//  if(!byte_index) index++;  //bit_index was just reset so increment the array index
-//   
-//  TCNT1 = 0;
-//}
+void pinChange() {
+  storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 1)) >> 1);
+//   if(PIND & B0000100)
+//     one_changes++;
+//   else
+//     zero_changes++;
+ num_ones = 0;
+ changes++;
+    
+  // increment bit_index and make sure its <= 8
+  byte_index++; 
+  byte_index &= B111; 
+  if(!byte_index) index++;  //bit_index was just reset so increment the array index
+   
+  TCNT1 = 0;
+}

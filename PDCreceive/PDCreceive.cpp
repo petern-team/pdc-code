@@ -19,7 +19,7 @@ PDCreceive::PDCreceive(long product) {
 
 void PDCreceive::checkIR(IRrecv irrecv, decode_results results) {
     if (irrecv.decode(&results)) {
-        Serial.println("got something");
+//        Serial.println("got something");
         IR_busy = true;
         irrecv.resume();
         storeData(results.value);
@@ -28,10 +28,11 @@ void PDCreceive::checkIR(IRrecv irrecv, decode_results results) {
 
 //print the array when the end of transmission code is received
 void PDCreceive::printTransmission() {
+    Serial.println("printing transmission");
     for (int i=0; i<index; i++) {
-        Serial.print(transmissionArray[i]);
+        Keyboard.print(transmissionArray[i]);
     }
-    Serial.println();
+//    Keyboard.println();
 }
 
 
@@ -51,12 +52,13 @@ void PDCreceive::storeData(char key) {
     } else
         transmissionArray[index] = key;//keyIndex[key];
     
-//    Serial.println(transmissionArray[index]);
+    Serial.print(transmissionArray[index]);
     index++;
     if(key == ':') {
         transmission_complete = true;
 //        Serial.print("transmission[5]= "); Serial.println(transmissionArray[5]);
         checkTransmission();
+        printTransmission();
         return;
     }
     

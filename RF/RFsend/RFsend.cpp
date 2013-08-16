@@ -125,8 +125,10 @@ void RFsend::sendCondensedArray(bool last) {
         if(msg_index > 14)
             sendCondensedColumn(msg, &msg_index);
     }
-    if(last)
+    if(last) {
         msg[msg_index++] = ':';            // colon means end of transmission
+//        Serial.println("end of transmissino");
+    }
     sendCondensedColumn(msg, &msg_index);
 }
 
@@ -228,7 +230,7 @@ void RFsend::addColumn(int index, int *msg_index, char msg[]) {
 
 // send up to 27 codes that have been condensed into a string
 void RFsend::sendCondensedColumn(char msg[], int *msg_index) {
-//    Serial.print("sending: "); Serial.println(msg);
+    Serial.print("sending: "); Serial.println(msg);
     vw_send((uint8_t *)msg, *msg_index);
     vw_wait_tx();
     (*msg_index) = 0;

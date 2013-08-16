@@ -228,13 +228,14 @@ void sendData() {
   // make sure a DTD is in range and listening before sending data
   sensorSend.sendSyncCode();
   overflow_1 = 0;
-  while(overflow_1 < 500) {
+  while(overflow_1 < 1000) {
     sensorRecv.checkRF();
   }
   if(!sensorRecv.PDC_sync) {
     Serial.println("no DTD found");
     return;
   }
+  delay(100);
   sensorRecv.resetVariables();
     
 //  long start_send = micros();
@@ -347,7 +348,7 @@ void waitForConfirm() {
 //  irrecv.enableIRIn();
   overflow_1 = 0;
   // wait 15 seconds
-  while(overflow_1 < 15000) {
+  while(overflow_1 < 1500) {
     sensorRecv.checkRF();
     
     // if a confirm code is received (confirm = 7__) then reset variables and return.

@@ -16,8 +16,8 @@ const unsigned int PRODUCT_ID = 38301; //"DTD01"
 const int RECEIVE_PIN = 8;
 const int redLED = 3;
 const int greenLED = 2;
-const int RFRECEIVE = 13;
-const int RFTRANSMIT = 12;
+const int RFRECEIVE = 12;
+const int RFTRANSMIT = 5;
 const int TRANSMIT_EN_PIN = 4;
 
 char comp_char_arr[(ARR_SIZE*2)/5];        // adjust size to account for storage strategy

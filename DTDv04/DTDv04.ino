@@ -19,7 +19,7 @@ int char_index;
 
 
 PDCsend DTDsend(38301);
-PDCreceive DTDreceive(PRODUCT_ID);
+PDCreceive DTDreceive;
 IRrecv irrecv(8);    // create the IR library
 decode_results results;
 

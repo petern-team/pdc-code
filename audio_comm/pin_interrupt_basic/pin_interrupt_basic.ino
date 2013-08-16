@@ -61,8 +61,7 @@ Serial.println("exiting setup");
 }
 
 void loop() {
-
-  if(digitalRead(BUTTON) && changes > 10 || changes > 3100) {
+  if(!digitalRead(BUTTON) && changes > 10 || changes > 3100) {
     ref_index = index;
     index = 0;
     Serial.print(changes); Serial.print(", "); Serial.print(ref_index); Serial.print(": ");
@@ -103,12 +102,13 @@ void loop() {
 }
 
 ISR(TIMER1_COMPA_vect) {
+  the_bit = !((PIND & (1 << 1))>>1);
 // if one of the last four pulses was true or current transmission is true 
 //  if(!(byte_index > 6 && storage_arr[index] == 0) || (PINB & B0000001)){  
-  if((PIND & (1 << 1)) || num_zeros < 120) {
-    storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 1))>>1);
+  if(the_bit || num_zeros < 120) {
+    storage_arr[index] = (storage_arr[index] << 1) | the_bit;
     // increment byte_index and make sure its less than 8
-    if(PIND & (1 << 1))
+    if(the_bit)
       num_zeros=0;
     else
       num_zeros++;
@@ -120,7 +120,8 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 void pinChange() {
-  storage_arr[index] = (storage_arr[index] << 1) | ((PIND & (1 << 1))>>1);
+  the_bit = !((PIND & (1 << 1))>>1);
+  storage_arr[index] = (storage_arr[index] << 1) | the_bit;
 //   if(PIND & B0000100)
 //     one_changes++;
 //   else
@@ -133,5 +134,5 @@ void pinChange() {
   byte_index &= B111; 
   if(!byte_index) index++;  //bit_index was just reset so increment the array index
    
-//  TCNT1 = 0;
+  TCNT1 = 0;
 }

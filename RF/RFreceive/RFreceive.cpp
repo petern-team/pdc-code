@@ -56,6 +56,7 @@ void RFreceive::printTransmission() {
 // finds a colon
 
 void RFreceive::storeData(char key) {
+//    Serial.print("index = "); Serial.println(index);
     if(key > 60 || key < 44) {     //kinda sloppy strategy to deal with unwanted values
         
         // sometimes the first character of a transmission is weird

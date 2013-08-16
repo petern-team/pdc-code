@@ -42,7 +42,7 @@ public:
 //    void sendRFArray(bool last = true);
     void sendCharArray(char char_arr[], int length);
     void sendSyncCode();
-    void sendCommand(int);
+    void sendCommand(int, bool confirm = false);
     
     
     // debugging function used to print transmissionArray to serial on the PDC

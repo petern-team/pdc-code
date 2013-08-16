@@ -13,9 +13,9 @@
 #include <RFreceive.h>
 #include "button.h"
 
-const int RECEIVEPIN = 9;
-const int RFTRANSMIT = 12;
-const int RFRECEIVE = 11;
+//const int RECEIVEPIN = 9;
+const int RFTRANSMIT = 9;
+const int RFRECEIVE = 10;
 const int TRANSMIT_EN_PIN = 13;    // doesn't really do anything
 const int BUTTON = 2;
 const int LEDPIN = 7;

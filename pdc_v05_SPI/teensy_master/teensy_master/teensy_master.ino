@@ -59,8 +59,8 @@ void setup() {
   irrecv.enableIRIn();
   pinMode(sensorPin, INPUT);
   
-  attachInterrupt(button_1.interrupt_pin, rise1_funct, RISING);
-  attachInterrupt(button_2.interrupt_pin, rise2_funct, RISING);
+  attachInterrupt(button_1.interrupt_pin, rise1_funct, FALLING);
+  attachInterrupt(button_2.interrupt_pin, rise2_funct, FALLING);
   
   // PDC on the arduino will start on the load screen, which allows the user to 
   // select or clear memory slots
@@ -167,6 +167,10 @@ void runSyncScreen() {
     incoming_write[0][i] = 0;
     incoming_write[1][i] = 0;
   }
+  // if syncing isn't working dump all data anyway
+  sendSPIdata(41);
+  sendTimes();
+  
 
   pdcSend.sendSyncCode();
   irrecv.enableIRIn();
@@ -288,7 +292,7 @@ void rise2_funct(){
 
 int sensorValue() 
 {
-   return map(analogRead(sensorPin), 0, 910, 0, 24); 
+   return map(analogRead(sensorPin), 0, 1023, 0, 24); 
 }
 
  //maps the analog read output to a new number

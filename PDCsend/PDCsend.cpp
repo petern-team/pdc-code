@@ -172,20 +172,21 @@ void PDCsend::sendSyncCode() {
     
     for(int i=4;i>=0;i--) {
         sendAndDelay(irKeyCodes[ID_components[i]]);
-//        Serial.print(ID_components[i]);
+        Serial.print(ID_components[i]);
     }
     Serial.println();
-    Serial.println(irKeyCodes[12], HEX);
-    irsend.sendSony(irKeyCodes[12], 32);
+//    Serial.println(irKeyCodes[12], HEX);
+    sendAndDelay(irKeyCodes[12]);
 }
 
 // sendConfirm transforms a transmission id into a confirmation code and sends it to
 // the DTD
 
-void PDCsend::sendCommand(int trans_id) {
+void PDCsend::sendCommand(int trans_id, bool confirm) {
     int product_id_arr[NUM_COMPS];
     int trans_id_arr[3];
-    trans_id = trans_id%100 + 700;
+    if(confirm)
+        trans_id = trans_id%100 + 700;
     
     breakItDown(my_id, product_id_arr);
     for(int i=4;i>=0;i--) {

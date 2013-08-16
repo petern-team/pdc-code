@@ -17,30 +17,30 @@ volatile unsigned long overflow_1600;
 void initAudioPin() {
   
 //  char_index = 0;
-  last_state = 0;
-  overflow_1600 = 0;
-  
-  cli();
-  TCCR0A = 0;// set entire TCCR0A register to 0
-  TCCR0B = 0;// same for TCCR0B
-  TCNT0  = 0;//initialize counter value to 0
-  // set compare match register for 1600hz increments
-  OCR0A = 156;// = (16*10^6) / (64*1024) - 1 (must be <256)
-  // turn on CTC mode
-  TCCR0A |= (1 << WGM01);
-  // Set prescaler
-  //  TCCR2B |= (1 << CS20);  // no prescaler
-  //  TCCR2B |= (1 << CS21);  // 8 prescaler
-//  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler timer 0
-//   TCCR2B |= (1 << CS22);    // timer2 64 prescaler
-  TCCR0B |= (1 << CS01) | (1 << CS00); // timer0 64 prescaler
-  //  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
-//  TCCR0B |= (1 << CS02) | (1 << CS00); // 1024 prescaler - not for timer2
-  
-  // enable timer compare interrupt
-  TIMSK0 |= (1 << OCIE0A);
-  sei();
-  attachInterrupt(7,pinChange,CHANGE);
+//  last_state = 0;
+//  overflow_1600 = 0;
+//  
+//  cli();
+//  TCCR0A = 0;// set entire TCCR0A register to 0
+//  TCCR0B = 0;// same for TCCR0B
+//  TCNT0  = 0;//initialize counter value to 0
+//  // set compare match register for 1600hz increments
+//  OCR0A = 156;// = (16*10^6) / (64*1024) - 1 (must be <256)
+//  // turn on CTC mode
+//  TCCR0A |= (1 << WGM01);
+//  // Set prescaler
+//  //  TCCR2B |= (1 << CS20);  // no prescaler
+//  //  TCCR2B |= (1 << CS21);  // 8 prescaler
+////  TCCR0B |= (1 << CS01) | (1<<CS00);  // 64 prescaler timer 0
+////   TCCR2B |= (1 << CS22);    // timer2 64 prescaler
+//  TCCR0B |= (1 << CS01) | (1 << CS00); // timer0 64 prescaler
+//  //  //  TCCR2B |= (1 << CS21) | (1 << CS20);  // 256 prescaler - not for timer2
+////  TCCR0B |= (1 << CS02) | (1 << CS00); // 1024 prescaler - not for timer2
+//  
+//  // enable timer compare interrupt
+//  TIMSK0 |= (1 << OCIE0A);
+//  sei();
+//  attachInterrupt(7,pinChange,CHANGE);
 }
 
 // ISR for changing value on pin 7, helps align timer0 for sampling
